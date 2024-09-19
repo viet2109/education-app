@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo:latest
+    container_name: mongo_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: lptd010303@
+      MONGO_INITDB_DATABASE: user-service
+    networks:
+      - microservices-net
+
+  mysql:
+    image: mysql:latest
+    container_name: mysql_db
+    environment:
+      MYSQL_ROOT_PASSWORD: lptd010303@
+      MYSQL_DATABASE: study_app
+    ports:
+      - "3307:3306"
+    networks:
+      - microservices-net
+    volumes:
+      - mysql:/var/lib/mysql
+
+  mail-dev:
+    container_name: mail_dev
+    image: maildev/maildev
+    ports:
+      - "1080:1080"
+      - "1025:1025"
+    networks:
+      - microservices-net
+
+networks:
+  microservices-net:
+    driver: bridge
+
+volumes:
+  mongo:
+  mysql:

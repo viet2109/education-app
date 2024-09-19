@@ -1,0 +1,13 @@
+spring:
+  data:
+    mongodb:
+      host: localhost
+      port: 27017
+      database: user-service
+      username: root
+      password: lptd010303@
+      authentication-database: admin
+      auto-index-creation: true
+server:
+  port: 8082
+
