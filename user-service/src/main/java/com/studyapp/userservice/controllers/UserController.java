@@ -27,11 +27,11 @@ public class UserController {
                 .path("/{id}")
                 .buildAndExpand(user.getId())
                 .toUri();
-        return ResponseEntity.created(location).build();
+        return ResponseEntity.created(location).body(String.format("User with id %s created successfully", user.getId()));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> findUserById(@PathVariable String id) {
+    public ResponseEntity<UserResponse> findUserById(@PathVariable String id) {
         return ResponseEntity.ok(userService.getUserById(id));
     }
 
@@ -48,13 +48,13 @@ public class UserController {
     @PatchMapping("/{id}")
     public ResponseEntity<?> deActiveUser(@PathVariable String id) {
         userService.deActiveUser(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(String.format("User with id %s deactivated successfully", id));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable String id) {
+    public ResponseEntity<?> deleteUser(@PathVariable String id) {
         userService.deleteUser(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(String.format("User with id %s deleted successfully", id));
     }
 }
 

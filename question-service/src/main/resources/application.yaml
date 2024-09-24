@@ -1,14 +1,5 @@
 spring:
   application:
     name: question-service
-  datasource:
-    username: root
-    password: lptd010303@
-    url: jdbc:mysql://localhost:3306/study_app
-    driver-class-name: com.mysql.cj.jdbc.Driver
-  jpa:
-    hibernate:
-      ddl-auto: create-drop
-  data:
-    jdbc:
-      dialect: mysql
+  config:
+    import: optional:configserver:http://localhost:8888

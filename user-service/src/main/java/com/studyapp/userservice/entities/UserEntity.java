@@ -9,7 +9,6 @@ import lombok.experimental.FieldDefaults;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
@@ -18,7 +17,6 @@ import org.springframework.data.mongodb.core.mapping.FieldType;
 import java.time.LocalDateTime;
 import java.util.List;
 
-@CompoundIndex()
 @Document(collection = "users")
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Builder
@@ -28,7 +26,7 @@ public class UserEntity {
     @Id
     String id;
 
-    @NotNull(message = "Name cannot be null")
+    @NotNull(message = "name must not be null")
     String name;
 
     @Indexed(unique = true)
