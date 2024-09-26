@@ -46,7 +46,7 @@ public class QuizService {
 
         // Gọi Feign Client một lần với tất cả các ID bài thi nếu danh sách không rỗng
         List<QuestionResponseDto> allQuestions = quizIds.isEmpty() ? Collections.emptyList()
-                : questionClient.getListQuestion(null, quizIds).getBody();
+                : questionClient.getQuestionsByQuery(null, quizIds).getBody();
 
         if (allQuestions == null) {
             allQuestions = Collections.emptyList();
@@ -69,5 +69,10 @@ public class QuizService {
 
     public QuizResponseDto getExamById(Long id) {
         return quizMapper.entityToRpDto(quizDao.findById(id).orElseThrow(() -> new QuizException(QuizError.EXAM_NOT_FOUND)));
+    }
+
+    public void deleteQuizById(Long id) {
+        quizDao.deleteById(id);
+        questionClient.deleteQuestionByIdsOrExamId(null, id);
     }
 }

@@ -1,6 +1,9 @@
 server:
   port: 8222
 
+app:
+  api-prefix: /api/v1
+
 spring:
   cloud:
     gateway:
@@ -11,12 +14,68 @@ spring:
         - id: user-service
           uri: lb://USER-SERVICE
           predicates:
-            - Path=/users/**
+            - Path=${app.api-prefix}/users/**
+          filters:
+            - StripPrefix=2
+            - name: CircuitBreaker
+              args:
+                name: userServiceCB
+                fallbackUri: forward:/fallback/user
         - id: question-service
           uri: lb://QUESTION-SERVICE
           predicates:
-            - Path=/questions/**
+            - Path=${app.api-prefix}/questions/**
+          filters:
+            - StripPrefix=2
+            - name: CircuitBreaker
+              args:
+                name: questionServiceCB
+                fallbackUri: forward:/fallback/question
         - id: quiz-service
           uri: lb://QUIZ-SERVICE
           predicates:
-            - Path=/quizzes/**
+            - Path=${app.api-prefix}/quizzes/**
+          filters:
+            - StripPrefix=2
+            - name: CircuitBreaker
+              args:
+                name: quizServiceCB
+                fallbackUri: forward:/fallback/quiz
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: "http://localhost:9090/realms/education-app"
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      userServiceCB:
+        register-health-indicator: true
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10000  # Thời gian ở trạng thái "open" (10 giây)
+        permitted-number-of-calls-in-half-open-state: 3
+        sliding-window-type: COUNT_BASED
+        minimum-number-of-calls: 5
+        automatic-transition-from-open-to-half-open-enabled: true
+
+      questionServiceCB:
+        register-health-indicator: true
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10000  # Thời gian ở trạng thái "open"
+        permitted-number-of-calls-in-half-open-state: 3
+        sliding-window-type: COUNT_BASED
+        minimum-number-of-calls: 5
+        automatic-transition-from-open-to-half-open-enabled: true
+
+      quizServiceCB:
+        register-health-indicator: true
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10000
+        permitted-number-of-calls-in-half-open-state: 3
+        sliding-window-type: COUNT_BASED
+        minimum-number-of-calls: 5
+        automatic-transition-from-open-to-half-open-enabled: true

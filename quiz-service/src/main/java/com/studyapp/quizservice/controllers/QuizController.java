@@ -22,6 +22,7 @@ public class QuizController {
 
     @GetMapping("/{id}")
     public ResponseEntity<QuizResponseDto> getExamById(@PathVariable Long id) {
+
         return ResponseEntity.ok(quizService.getExamById(id));
     }
 
@@ -38,6 +39,11 @@ public class QuizController {
                 .buildAndExpand(responseDto.getId())
                 .toUri();
         return ResponseEntity.created(location).body(responseDto);
+    }
+
+    @DeleteMapping("/{id}")
+    public void deleteQuiz(@PathVariable Long id) {
+        quizService.deleteQuizById(id);
     }
 
 }

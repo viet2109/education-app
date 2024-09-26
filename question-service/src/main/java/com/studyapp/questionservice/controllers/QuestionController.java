@@ -51,9 +51,9 @@ public class QuestionController {
     }
 
     @GetMapping
-    public ResponseEntity<List<QuestionResponseDto>> getListQuestion(@RequestParam(required = false) @Valid @Size(min = 1, message = "List of questionsId must contain at least one questionId.") List<Long> ids,
+    public ResponseEntity<List<QuestionResponseDto>> getQuestionsByQuery(@RequestParam(required = false) @Valid @Size(min = 1, message = "List of questionsId must contain at least one questionId.") List<Long> ids,
                                             @RequestParam(required = false) @Valid @Size(min = 1, message = "List of examId must contain at least one examId.") List<Long> examIds) {
-        return ResponseEntity.ok(questionService.getListQuestion(ids, examIds));
+        return ResponseEntity.ok(questionService.getQuestionsByQuery(ids, examIds));
     }
 
     @GetMapping("/{id}")
@@ -71,9 +71,10 @@ public class QuestionController {
 //        return ResponseEntity.created(location).build();
 //    }
 
-    @DeleteMapping("/bulk")
-    public ResponseEntity<?> deleteListQuestion(@RequestBody List<Long> questionList) {
-        questionService.deleteListQuestion(questionList);
+    @DeleteMapping()
+    public ResponseEntity<?> deleteQuestionByIdsOrExamId(@RequestParam(required = false) @Valid @Size(min = 1, message = "List of questionsId must contain at least one questionId.") List<Long> ids,
+                                                @RequestParam(required = false) Long examId) {
+        questionService.deleteQuestionsByIdsOrExamId(ids, examId);
         return ResponseEntity.noContent().build();
     }
 
