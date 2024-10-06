@@ -20,7 +20,7 @@ target/
 *.ipr
 
 ### Firebase Key ###
-/src/main/resources/education-app.json
+!**/src/main/resources/education-app.json
 
 ### NetBeans ###
 /nbproject/private/
