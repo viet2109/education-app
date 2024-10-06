@@ -18,7 +18,7 @@ target/
 *.iws
 *.iml
 *.ipr
-*.json
+education-app.json
 
 ### NetBeans ###
 /nbproject/private/
