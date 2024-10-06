@@ -22,6 +22,7 @@ target/
 ### Firebase Key ###
 !**/src/main/resources/education-app.json
 
+
 ### NetBeans ###
 /nbproject/private/
 /nbbuild/
