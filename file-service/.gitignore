@@ -18,7 +18,9 @@ target/
 *.iws
 *.iml
 *.ipr
-education-app.json
+
+### Firebase Key ###
+/src/main/resources/education-app.json
 
 ### NetBeans ###
 /nbproject/private/
