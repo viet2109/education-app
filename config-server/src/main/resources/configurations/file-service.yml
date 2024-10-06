@@ -1,0 +1,29 @@
+app:
+  firebase:
+    bucketName: education-app-25fc8
+    configPath: education-app.json
+
+server:
+  port: 8086
+
+eureka:
+  instance:
+    prefer-ip-address: true
+
+spring:
+  datasource:
+    username: viet
+    password: lptd010303@
+    url: jdbc:postgresql://localhost:5432/study_app
+    driver-class-name: org.postgresql.Driver
+  data:
+    jdbc:
+      dialect: postgresql
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  servlet:
+    multipart:
+      enabled: true
+      maxFileSize: 10MB
+      maxRequestSize: 10MB

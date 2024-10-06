@@ -1,22 +1,21 @@
 package com.studyapp.userservice.services;
 
+import com.studyapp.userservice.client.AuthClient;
+import com.studyapp.userservice.client.UserUpdateAuthProfileRequest;
 import com.studyapp.userservice.dao.UserDao;
 import com.studyapp.userservice.dto.request.UserRequest;
 import com.studyapp.userservice.dto.response.UserResponse;
 import com.studyapp.userservice.entities.UserEntity;
-import com.studyapp.userservice.enums.Role;
 import com.studyapp.userservice.enums.UserError;
 import com.studyapp.userservice.exceptions.UserException;
 import com.studyapp.userservice.mapper.UserMapper;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Objects;
 
 @Service
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -24,7 +23,7 @@ import java.util.Objects;
 public class UserService {
     UserDao userDao;
     UserMapper userMapper;
-    PasswordEncoder passwordEncoder;
+    AuthClient authClient;
 
     @Transactional
     public UserResponse createUser(UserRequest userRequest) {
@@ -37,9 +36,6 @@ public class UserService {
         });
 
         UserEntity user = userMapper.requestToEntity(userRequest);
-        user.setPassword(passwordEncoder.encode(userRequest.getPassword()));
-        user.setRoles(List.of(Role.USER));
-        user.setActive(true);
 
         UserEntity userEntity = userDao.save(user);
         return userMapper.entityToResponse(userEntity);
@@ -53,57 +49,60 @@ public class UserService {
 
     @Transactional
     public UserResponse updateUser(String id, UserRequest userRequest) {
+        // Tìm kiếm người dùng theo ID
         UserEntity existingUser = userDao.findById(id)
                 .orElseThrow(() -> new UserException(UserError.USER_NOT_FOUND));
 
-        if (!Objects.equals(existingUser.getEmail(), userRequest.getEmail())) {
-            userDao.findByEmail(userRequest.getEmail()).ifPresent(user -> {
+        String newEmail = userRequest.getEmail();
+        String newPhone = userRequest.getPhone();
+        String newName = userRequest.getName();
+        UserUpdateAuthProfileRequest userUpdateAuthProfileRequest = UserUpdateAuthProfileRequest.builder().build();
+
+
+        // Kiểm tra xem email đã tồn tại hay chưa
+        if (!existingUser.getEmail().equals(newEmail)) {
+            userDao.findByEmail(newEmail).ifPresent(user -> {
                 throw new UserException(UserError.ALREADY_EXIST_EMAIL);
             });
+            existingUser.setEmail(newEmail);
+            userUpdateAuthProfileRequest.setEmail(newEmail);
         }
 
-        if (!Objects.equals(existingUser.getPhone(), userRequest.getPhone())) {
-            userDao.findByPhone(userRequest.getPhone()).ifPresent(user -> {
+        // Kiểm tra xem số điện thoại đã tồn tại hay chưa
+        if (!existingUser.getPhone().equals(newPhone)) {
+            userDao.findByPhone(newPhone).ifPresent(user -> {
                 throw new UserException(UserError.ALREADY_EXIST_PHONE);
             });
+            existingUser.setPhone(newPhone);
         }
 
-        existingUser.setEmail(userRequest.getEmail());
-        existingUser.setName(userRequest.getName());
-        existingUser.setPhone(userRequest.getPhone());
-
-        if (!passwordEncoder.matches(userRequest.getPassword(), existingUser.getPassword())) {
-            existingUser.setPassword(passwordEncoder.encode(userRequest.getPassword()));
+        // Chỉ cập nhật tên nếu tên mới khác với tên hiện tại
+        if (!existingUser.getName().equals(newName)) {
+            existingUser.setName(newName);
+            userUpdateAuthProfileRequest.setName(newName);
         }
+        authClient.updateUser(existingUser.getId(), userUpdateAuthProfileRequest);
 
+        // Lưu lại thay đổi vào database
         userDao.save(existingUser);
+
+        // Trả về phản hồi từ entity đã được cập nhật
         return userMapper.entityToResponse(existingUser);
     }
 
-    public List<UserResponse> getAllUser(boolean isActive) {
-        return userDao.findAllByIsActive(isActive).stream()
-                .map(userMapper::entityToResponse)
-                .toList();
+
+    public List<UserResponse> getAllUser() {
+        return userDao.findAll().stream().map(userMapper::entityToResponse).toList();
     }
 
     @Transactional
     public void deleteUser(String id) {
         userDao.findById(id).ifPresentOrElse(
                 user -> userDao.deleteById(id),
-                () -> { throw new UserException(UserError.USER_NOT_FOUND); }
+                () -> {
+                    throw new UserException(UserError.USER_NOT_FOUND);
+                }
         );
-    }
-
-    @Transactional
-    public void deActiveUser(String id) {
-        userDao.findById(id).ifPresentOrElse(user -> {
-            if (user.isActive()) {
-                user.setActive(false);
-                userDao.save(user);
-            }
-        }, () -> {
-            throw new UserException(UserError.USER_NOT_FOUND);
-        });
     }
 }
 

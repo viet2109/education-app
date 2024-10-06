@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # Các dịch vụ hiện tại của bạn...
   mongo:
     image: mongo:latest
     container_name: mongo_db
@@ -14,6 +15,12 @@ services:
       MONGO_INITDB_DATABASE: user-service
     networks:
       - microservices-net
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    restart: always
 
   mysql:
     image: mysql:latest
@@ -22,11 +29,18 @@ services:
       MYSQL_ROOT_PASSWORD: lptd010303@
       MYSQL_DATABASE: study_app
     ports:
-      - "3307:3306"
+      - "3306:3306" # Sử dụng cổng mặc định
     networks:
       - microservices-net
     volumes:
       - mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
+
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
     container_name: zookeeper
@@ -37,6 +51,12 @@ services:
       - "2181:2181"
     networks:
       - microservices-net
+    restart: always
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   kafka:
     image: confluentinc/cp-kafka:latest
@@ -50,32 +70,89 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
     networks:
       - microservices-net
+    healthcheck:
+      test: ["CMD", "kafka-topics", "--zookeeper", "zookeeper:2181", "--list"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    restart: always
 
   mail-dev:
     container_name: mail_dev
     image: maildev/maildev
     ports:
-      - "1080:1080"
-      - "1025:1025"
+      - "1080:1080"  # Web UI
+      - "1025:1025"  # SMTP
     networks:
       - microservices-net
+    restart: always
+
+  postgres:
+    image: postgres:latest
+    container_name: pg_db
+    restart: always
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: study_app
+      POSTGRES_USER: viet
+      POSTGRES_PASSWORD: lptd010303@
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   keycloak:
+    image: quay.io/keycloak/keycloak:25.0.0
     container_name: keycloak
-    image: quay.io/keycloak/keycloak:24.0.2
+    command: start-dev
+    restart: always
+    links:
+      - postgres
     ports:
-      - "9090:8080"
+      - "9082:8080"
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: postgres
+      KC_DB_USERNAME: viet
+      KC_DB_PASSWORD: lptd010303@
+      KC_DB_URL: jdbc:postgresql://postgres:5432/study_app
+      KC_DB_SCHEMA: public  # Tùy chọn
+      KC_FEATURES: token-exchange,admin-fine-grained-authz
     networks:
       - microservices-net
-    command:
-      - "start-dev"
+    depends_on:
+      - postgres
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/auth"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  # Cấu hình thêm Redis
+  redis:
+    image: redis:latest
+    container_name: redis_container
+    ports:
+      - "6379:6379"
+    networks:
+      - microservices-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: always
 
 networks:
   microservices-net:
@@ -84,3 +161,4 @@ networks:
 volumes:
   mongo:
   mysql:
+  pg:

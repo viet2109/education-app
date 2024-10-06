@@ -1,4 +1,4 @@
-package com.studyapp.userservice.enums;
+package com.studyapp.authservice.enums;
 
 public enum Role {
     ADMIN,

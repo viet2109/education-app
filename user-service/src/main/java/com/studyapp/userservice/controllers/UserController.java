@@ -21,13 +21,13 @@ public class UserController {
     UserService userService;
 
     @PostMapping
-    public ResponseEntity<?> createUser(@RequestBody @Valid UserRequest userRequest) {
+    public ResponseEntity<UserResponse> createUser(@RequestBody @Valid UserRequest userRequest) {
         UserResponse user = userService.createUser(userRequest);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
                 .buildAndExpand(user.getId())
                 .toUri();
-        return ResponseEntity.created(location).body(String.format("User with id %s created successfully", user.getId()));
+        return ResponseEntity.created(location).body(user);
     }
 
     @GetMapping("/{id}")
@@ -37,18 +37,12 @@ public class UserController {
 
     @GetMapping
     public ResponseEntity<?> findAllUser() {
-        return ResponseEntity.ok(userService.getAllUser(true));
+        return ResponseEntity.ok(userService.getAllUser());
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<?> updateUser(@PathVariable String id, @RequestBody @Valid UserRequest userRequest) {
         return ResponseEntity.ok(userService.updateUser(id, userRequest));
-    }
-
-    @PatchMapping("/{id}")
-    public ResponseEntity<?> deActiveUser(@PathVariable String id) {
-        userService.deActiveUser(id);
-        return ResponseEntity.ok(String.format("User with id %s deactivated successfully", id));
     }
 
     @DeleteMapping("/{id}")

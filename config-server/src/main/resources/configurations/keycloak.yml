@@ -1,0 +1,14 @@
+app:
+  keycloak:
+    admin:
+      clientId: admin-cli
+      clientSecret: fRhGYeALdq0EzIqBbtzXNQgvbQWN4Ab6
+    realm: education-app
+    serverUrl: http://localhost:9082
+
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${app.keycloak.serverUrl}/realms/${app.keycloak.realm}

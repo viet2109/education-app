@@ -1,6 +1,5 @@
 package com.studyapp.userservice.dto.request;
 
-import com.studyapp.userservice.enums.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -8,7 +7,6 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Data;
 import lombok.experimental.FieldDefaults;
-import org.hibernate.validator.constraints.Length;
 
 @Data
 @FieldDefaults(level = AccessLevel.PRIVATE)
@@ -25,8 +23,4 @@ public class UserRequest {
     @NotBlank(message = "The phone is mandatory")
     @Pattern(regexp = "^(\\+84|0)(3[2-9]|5[6|8|9]|7[0|6-9]|8[1-5]|9[0-9])[0-9]{7}$", message = "The phone number has invalid")
     String phone;
-
-    @NotBlank(message = "The password is mandatory")
-    @Length(min = 6, message = "The password must be at least 6")
-    String password;
 }

@@ -2,7 +2,7 @@ server:
   port: 8222
 
 app:
-  api-prefix: /api/v1
+  apiPrefix: /api/v1
 
 spring:
   cloud:
@@ -10,72 +10,129 @@ spring:
       discovery:
         locator:
           enabled: true
+      httpClient:
+        connectTimeout: 5000
+        responseTimeout: 20000  # Thời gian chờ của Gateway là 20 giây
+        wiretap: true
       routes:
-        - id: user-service
+        - id: userService
           uri: lb://USER-SERVICE
           predicates:
-            - Path=${app.api-prefix}/users/**
+            - Path=${app.apiPrefix}/users/**
           filters:
             - StripPrefix=2
             - name: CircuitBreaker
               args:
                 name: userServiceCB
                 fallbackUri: forward:/fallback/user
-        - id: question-service
+                timeLimiterEnabled: true  # Kích hoạt TimeLimiter cho bộ lọc này
+        - id: questionService
           uri: lb://QUESTION-SERVICE
           predicates:
-            - Path=${app.api-prefix}/questions/**
+            - Path=${app.apiPrefix}/questions/**
           filters:
             - StripPrefix=2
             - name: CircuitBreaker
               args:
                 name: questionServiceCB
                 fallbackUri: forward:/fallback/question
-        - id: quiz-service
+                timeLimiterEnabled: true
+        - id: quizService
           uri: lb://QUIZ-SERVICE
           predicates:
-            - Path=${app.api-prefix}/quizzes/**
+            - Path=${app.apiPrefix}/quizzes/**
           filters:
             - StripPrefix=2
             - name: CircuitBreaker
               args:
                 name: quizServiceCB
                 fallbackUri: forward:/fallback/quiz
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: "http://localhost:9090/realms/education-app"
+                timeLimiterEnabled: true
+        - id: authService
+          uri: lb://AUTH-SERVICE
+          predicates:
+            - Path=${app.apiPrefix}/auth/**
+          filters:
+            - StripPrefix=2
+            - name: CircuitBreaker
+              args:
+                name: authServiceCB
+                fallbackUri: forward:/fallback/auth
+                timeLimiterEnabled: true
+        - id: fileService
+          uri: lb://FILE-SERVICE
+          predicates:
+            - Path=${app.apiPrefix}/files/**
+          filters:
+            - StripPrefix=2
+            - name: CircuitBreaker
+              args:
+                name: fileServiceCB
+                fallbackUri: forward:/fallback/file
+                timeLimiterEnabled: true
 
 resilience4j:
   circuitbreaker:
+    configs:
+      default:
+        slidingWindowSize: 10
+        failureRateThreshold: 50
+        waitDurationInOpenState: 15000
+        permittedNumberOfCallsInHalfOpenState: 3
+        slidingWindowType: COUNT_BASED
+        minimumNumberOfCalls: 5
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInHalfOpenState: 5000
+        recordExceptions:
+          - org.springframework.web.client.HttpServerErrorException
+          - java.io.IOException
+          - java.lang.NullPointerException
+          - java.util.concurrent.TimeoutException
+      authConfig:
+        slidingWindowSize: 15
+        failureRateThreshold: 40
+        waitDurationInOpenState: 20000
+        permittedNumberOfCallsInHalfOpenState: 5
+        minimumNumberOfCalls: 10
+        waitDurationInHalfOpenState: 7000
+      fileConfig:
+        slidingWindowSize: 20
+        failureRateThreshold: 50
+        waitDurationInOpenState: 20000
+        permittedNumberOfCallsInHalfOpenState: 5
+        minimumNumberOfCalls: 5
+        slowCallDurationThreshold: 1000
+        waitDurationInHalfOpenState: 5000
+
     instances:
       userServiceCB:
-        register-health-indicator: true
-        sliding-window-size: 10
-        failure-rate-threshold: 50
-        wait-duration-in-open-state: 10000  # Thời gian ở trạng thái "open" (10 giây)
-        permitted-number-of-calls-in-half-open-state: 3
-        sliding-window-type: COUNT_BASED
-        minimum-number-of-calls: 5
-        automatic-transition-from-open-to-half-open-enabled: true
-
+        baseConfig: default
       questionServiceCB:
-        register-health-indicator: true
-        sliding-window-size: 10
-        failure-rate-threshold: 50
-        wait-duration-in-open-state: 10000  # Thời gian ở trạng thái "open"
-        permitted-number-of-calls-in-half-open-state: 3
-        sliding-window-type: COUNT_BASED
-        minimum-number-of-calls: 5
-        automatic-transition-from-open-to-half-open-enabled: true
-
+        baseConfig: default
       quizServiceCB:
-        register-health-indicator: true
-        sliding-window-size: 10
-        failure-rate-threshold: 50
-        wait-duration-in-open-state: 10000
-        permitted-number-of-calls-in-half-open-state: 3
-        sliding-window-type: COUNT_BASED
-        minimum-number-of-calls: 5
-        automatic-transition-from-open-to-half-open-enabled: true
+        baseConfig: default
+      authServiceCB:
+        baseConfig: authConfig
+      fileServiceCB:
+        baseConfig: fileConfig
+
+  timelimiter:
+    configs:
+      default:
+        timeoutDuration: 20s  # Đồng bộ với thời gian chờ của Gateway
+    instances:
+      userServiceTL:
+        baseConfig: default
+      questionServiceTL:
+        baseConfig: default
+      quizServiceTL:
+        baseConfig: default
+      authServiceTL:
+        baseConfig: default
+      fileServiceTL:
+        baseConfig: default
+
+logging:
+  level:
+    io.github.resilience4j.circuitbreaker: DEBUG
+    io.github.resilience4j.timelimiter: DEBUG
