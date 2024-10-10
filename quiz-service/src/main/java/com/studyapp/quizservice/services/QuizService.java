@@ -68,7 +68,17 @@ public class QuizService {
     }
 
     public QuizResponseDto getExamById(Long id) {
-        return quizMapper.entityToRpDto(quizDao.findById(id).orElseThrow(() -> new QuizException(QuizError.EXAM_NOT_FOUND)));
+        QuizResponseDto quizResponseDto = quizMapper.entityToRpDto(quizDao.findById(id).orElseThrow(() -> new QuizException(QuizError.EXAM_NOT_FOUND)));
+
+        List<QuestionResponseDto> allQuestions = questionClient.getQuestionsByQuery(null, Collections.singletonList(id)).getBody();
+
+        if (allQuestions == null) {
+            allQuestions = Collections.emptyList();
+        }
+
+        quizResponseDto.setListQuestion(allQuestions);
+
+        return quizResponseDto;
     }
 
     public void deleteQuizById(Long id) {

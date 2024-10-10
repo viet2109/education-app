@@ -70,6 +70,17 @@ spring:
                 name: fileServiceCB
                 fallbackUri: forward:/fallback/file
                 timeLimiterEnabled: true
+        - id: cacheService
+          uri: lb://CACHE-SERVICE
+          predicates:
+            - Path=${app.apiPrefix}/cache/**
+          filters:
+            - StripPrefix=2
+            - name: CircuitBreaker
+              args:
+                name: cacheServiceCB
+                fallbackUri: forward:/fallback/cache
+                timeLimiterEnabled: true
 
 resilience4j:
   circuitbreaker:
@@ -115,6 +126,8 @@ resilience4j:
         baseConfig: authConfig
       fileServiceCB:
         baseConfig: fileConfig
+      cacheServiceCB:
+        baseConfig: default
 
   timelimiter:
     configs:
@@ -130,6 +143,8 @@ resilience4j:
       authServiceTL:
         baseConfig: default
       fileServiceTL:
+        baseConfig: default
+      cacheServiceTL:
         baseConfig: default
 
 logging:

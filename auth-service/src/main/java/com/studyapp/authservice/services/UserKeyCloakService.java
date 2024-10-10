@@ -12,7 +12,6 @@ import com.studyapp.authservice.exception.AuthException;
 import jakarta.ws.rs.core.Response;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.json.JSONException;
 import org.json.JSONObject;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.KeycloakBuilder;
@@ -133,10 +132,6 @@ public class UserKeyCloakService {
         userResource.executeActionsEmail(List.of("UPDATE_PASSWORD"));
     }
 
-    public void changePassword(String username) {
-
-    }
-
     public void updateUserProfileAuth(String id, UserUpdateRequest userUpdateRequest) {
         // Tìm người dùng dựa trên thuộc tính "db_id"
         List<UserRepresentation> userRepresentations = getUsersResource().searchByAttributes("db_id");
@@ -164,7 +159,6 @@ public class UserKeyCloakService {
         // Cập nhật lại thông tin người dùng
         userResource.update(userRepresentation);
     }
-
 
     public UserResource getUser(String userId) {
         UsersResource usersResource = getUsersResource();
@@ -199,16 +193,20 @@ public class UserKeyCloakService {
             if (!isVerifiedEmail(userLoginRequest.getEmail())) throw new AuthException(AuthError.UNVERIFIED_EMAIL);
             if (!isActiveAccount(userLoginRequest.getEmail())) throw new AuthException(AuthError.DISABLED_ACCOUNT);
             String userId = getUsersResource().searchByEmail(userLoginRequest.getEmail(), true).get(0).getAttributes().get("db_id").get(0);
+            String sessionId = UUID.randomUUID().toString();
             UserResponse userResponse = userClient.findUserById(userId).getBody();
 
-            cacheClient.saveRefreshToken(userId, tokenResponse.getRefreshToken());
+            cacheClient.saveRefreshToken(userId, sessionId, tokenResponse.getRefreshToken());
             log.info(tokenResponse.getRefreshToken());
 
             responseMap.put("access_token", tokenResponse.getToken());
             responseMap.put("user", userResponse);
+            responseMap.put("sessionId", sessionId);
+
         } catch (AuthException exception) {
             throw exception;
         } catch (Exception exception) {
+            log.error(exception.getMessage());
             throw new AuthException(AuthError.INVALID_CREDENTIALS);
         }
         return responseMap;
@@ -283,7 +281,7 @@ public class UserKeyCloakService {
         }
     }
 
-    public String refreshAccessToken(String userId) {
+    public String refreshAccessToken(String userId, String sessionId) {
         String url = serverUrl + "/realms/" + realm + "/protocol/openid-connect/token";
         String refreshToken = cacheClient.getRefreshToken(userId).getBody();
         log.info(refreshToken);
@@ -300,9 +298,7 @@ public class UserKeyCloakService {
 
         if (responseEntity.getStatusCode().is2xxSuccessful()) {
             JSONObject jsonObject = new JSONObject(responseEntity.getBody());
-
-            cacheClient.saveRefreshToken(userId, jsonObject.getString("refresh_token"));
-
+            cacheClient.saveRefreshToken(userId, sessionId, jsonObject.getString("refresh_token"));
             return jsonObject.getString("access_token");
         } else {
             throw new RuntimeException(responseEntity.getBody());

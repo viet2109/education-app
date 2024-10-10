@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Entity
 @Table(name = "answers")
 @Data
@@ -22,4 +24,7 @@ public class AnswerEntity {
     @ManyToOne
     @JoinColumn(name = "question_id", nullable = false)
     private QuestionEntity question;
+
+    @ElementCollection
+    List<String> filesUrl;
 }

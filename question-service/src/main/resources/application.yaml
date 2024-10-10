@@ -3,3 +3,8 @@ spring:
     name: question-service
   config:
     import: optional:configserver:http://localhost:8888
+  servlet:
+    multipart:
+      enabled: true
+      maxFileSize: 10MB
+      maxRequestSize: 10MB

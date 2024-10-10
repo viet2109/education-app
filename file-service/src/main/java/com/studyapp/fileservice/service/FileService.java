@@ -9,6 +9,7 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.util.Streamable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -17,7 +18,6 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -25,7 +25,6 @@ import java.util.stream.Collectors;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class FileService {
     MediaDao mediaDao;
-
 
     public List<String> uploadFiles(List<MultipartFile> files) throws IOException {
         List<CompletableFuture<String>> uploadFutures = files.parallelStream()
@@ -56,7 +55,7 @@ public class FileService {
         // Upload file using InputStream to avoid memory issues
         try (InputStream inputStream = file.getInputStream()) {
             Blob blob = bucket.create(fileName, inputStream, typeFile);
-            String fileUrl = blob.getMediaLink();
+            String fileUrl = "https://firebasestorage.googleapis.com/v0/b/" + bucket.getName() + "/o/" + fileName + "?alt=media";
             Media media = Media.builder()
                     .filename(fileName)
                     .fileType(typeFile)
@@ -71,5 +70,36 @@ public class FileService {
             throw new IOException("Failed to upload file: " + file.getOriginalFilename(), e);
         }
     }
+
+    public void deleteFiles(List<Long> fileIds) {
+        List<Media> mediaList = Streamable.of(mediaDao.findAllById(fileIds)).toList();
+
+        if (mediaList.isEmpty()) {
+            log.warn("No files found with given IDs: {}", fileIds);
+            return;
+        }
+
+        Bucket bucket = StorageClient.getInstance().bucket();
+
+        mediaList.forEach(media -> {
+            try {
+                Blob blob = bucket.get(media.getFilename());
+                if (blob != null) {
+                    boolean deleted = blob.delete();
+                    if (deleted) {
+                        log.info("Deleted file: {}", media.getFilename());
+                        mediaDao.delete(media);
+                    } else {
+                        log.error("Failed to delete file from storage: {}", media.getFilename());
+                    }
+                } else {
+                    log.warn("File not found in storage: {}", media.getFilename());
+                }
+            } catch (Exception e) {
+                log.error("Failed to delete file: {}", media.getFilename(), e);
+            }
+        });
+    }
+
 }
 

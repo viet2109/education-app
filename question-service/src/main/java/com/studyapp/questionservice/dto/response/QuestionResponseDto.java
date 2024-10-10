@@ -15,4 +15,5 @@ public class QuestionResponseDto {
     String content;
     List<AnswerResponseDto> listAnswer;
     Long examId;
+    List<String> filesUrl;
 }

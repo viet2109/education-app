@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 @FeignClient(value = "cache-service", path = "/cache", configuration = FeignConfig.class)
 public interface CacheClient {
     @PostMapping("/token/refresh")
-    ResponseEntity<Void> saveRefreshToken(@RequestParam String userId, @RequestParam String refreshToken);
+    ResponseEntity<Void> saveRefreshToken(@RequestParam String userId, @RequestParam String sessionId, @RequestParam String refreshToken);
 
     @GetMapping("/token/refresh")
     ResponseEntity<String> getRefreshToken(@RequestParam String userId);

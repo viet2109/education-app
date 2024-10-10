@@ -1,10 +1,12 @@
 package com.studyapp.questionservice.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -23,4 +25,6 @@ public class QuestionRequestDto {
 
     @NotNull(message = "The examId is mandatory")
     Long examId;
+
+    List<MultipartFile> files;
 }
