@@ -22,7 +22,6 @@ public class QuizController {
 
     @GetMapping("/{id}")
     public ResponseEntity<QuizResponseDto> getExamById(@PathVariable Long id) {
-
         return ResponseEntity.ok(quizService.getExamById(id));
     }
 

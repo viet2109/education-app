@@ -19,9 +19,6 @@ target/
 *.iml
 *.ipr
 
-### Firebase Key ###
-**/main/resources/education-app.json
-
 ### NetBeans ###
 /nbproject/private/
 /nbbuild/
