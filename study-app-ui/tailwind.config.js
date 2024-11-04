@@ -20,6 +20,11 @@ export default {
             },
             animation: {
                 fade: 'fadeIn .75s ease-in-out',
+                dot1: "loader 1s infinite alternate 0.2s",
+                dot2: "loader 1s infinite alternate 0.4s",
+                dot3: "loader 1s infinite alternate 0.6s",
+                dot4: "loader 1s infinite alternate 0.8s",
+                dot5: "loader 1s infinite alternate 1s",
             },
 
             keyframes: {
@@ -27,8 +32,19 @@ export default {
                     from: {opacity: 0},
                     to: {opacity: 1},
                 },
-
-            }
+                loader: {
+                    "0%": {
+                        width: "2px",
+                        height: "2px",
+                        borderRadius: "1px",
+                    },
+                    "100%": {
+                        width: "20px",
+                        height: "20px",
+                        borderRadius: "10px",
+                    },
+                },
+            },
         },
     },
     plugins: [],

@@ -37,7 +37,6 @@ public class Media {
     @CreationTimestamp
     LocalDateTime createdDate;
 
-
     @UpdateTimestamp
     LocalDateTime updatedDate;
 

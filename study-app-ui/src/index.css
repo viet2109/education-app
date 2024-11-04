@@ -3,64 +3,158 @@
 @tailwind utilities;
 
 @font-face {
-    font-family: "Quicksand";
-    src: url("./assets/fonts/Quicksand-Light.ttf") format('truetype');
-    font-weight: 300;
-    font-style: normal;
-    font-display: swap;
+  font-family: "Quicksand";
+  src: url("./assets/fonts/Quicksand-Light.ttf") format("truetype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
-    font-family: "Quicksand";
-    src: url("./assets/fonts/Quicksand-Regular.ttf") format('truetype');
-    font-weight: 400;
-    font-style: normal;
-    font-display: swap;
+  font-family: "Quicksand";
+  src: url("./assets/fonts/Quicksand-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
-    font-family: "Quicksand";
-    src: url("./assets/fonts/Quicksand-Medium.ttf") format('truetype');
-    font-weight: 500;
-    font-style: normal;
-    font-display: swap;
+  font-family: "Quicksand";
+  src: url("./assets/fonts/Quicksand-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
-    font-family: "Quicksand";
-    src: url("./assets/fonts/Quicksand-SemiBold.ttf") format('truetype');
-    font-weight: 600;
-    font-style: normal;
-    font-display: swap;
+  font-family: "Quicksand";
+  src: url("./assets/fonts/Quicksand-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
 }
 
 @font-face {
-    font-family: "Quicksand";
-    src: url("./assets/fonts/Quicksand-Bold.ttf") format('truetype');
-    font-weight: 700;
-    font-style: normal;
-    font-display: swap;
+  font-family: "Quicksand";
+  src: url("./assets/fonts/Quicksand-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+*::selection {
+  @apply bg-primary text-white
+}
+
+html {
+  *::-webkit-scrollbar {
+    border-radius: 0;
+    width: 8px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    border-radius: 4px;
+    @apply bg-slate-300;
+  }
+
+  *::-webkit-scrollbar-track {
+    border-radius: 4px;
+    @apply bg-slate-100;
+  }
 }
 
 body {
-    font-family: "Quicksand", sans-serif;
-    font-weight: 500;
+  font-family: "Quicksand", sans-serif;
+  font-weight: 500;
+  word-break: break-all;
 }
+
 img {
-    object-fit: contain;
+  object-fit: contain;
+}
+
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+
+/* Style cho input radio đã được chọn */
+input[type="radio"]:checked {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg viewBox='0 0 16 16' fill='%23fff' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='8' cy='8' r='3'/%3E%3C/svg%3E");
+}
+
+input[type="checkbox"]:checked {
+  background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e");
+}
+
+/* Style cho input checkbox và radio khi đã được chọn */
+input[type="radio"]:checked,
+input[type="checkbox"]:checked {
+  border-color: transparent;
+  background-color: currentColor;
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Style mặc định cho input checkbox và radio */
+input[type="radio"],
+input[type="checkbox"] {
+  -webkit-appearance: none; /* Tắt kiểu mặc định cho các trình duyệt WebKit */
+  -moz-appearance: none; /* Tắt kiểu mặc định cho Firefox */
+  appearance: none; /* Tắt kiểu mặc định */
+  padding: 0;
+  display: inline-block;
+  vertical-align: middle;
+  background-origin: border-box;
+  user-select: none; /* Ngăn người dùng chọn */
+  flex-shrink: 0; /* Ngăn phần tử co lại */
+  height: 1rem; /* Đặt chiều cao */
+  width: 1rem; /* Đặt chiều rộng */
+  color: #27b489; /* Màu sắc của phần tử */
+  background-color: #fff; /* Màu nền mặc định */
+  border: 1px solid #27b489; /* Đặt viền cho phần tử */
+  border-radius: 50%;
+}
+
+/* Style cho checkbox và radio khi hover hoặc focus */
+input[type="checkbox"]:checked:hover,
+input[type="checkbox"]:checked:focus,
+input[type="radio"]:checked:hover,
+input[type="radio"]:checked:focus {
+  border-color: transparent;
+  background-color: currentColor;
+}
+
+/* Style cho checkbox và radio khi focus */
+input[type="checkbox"]:focus,
+input[type="radio"]:focus {
+  outline: 2px solid transparent; /* Đặt outline trong suốt */
+  outline-offset: 2px; /* Khoảng cách giữa outline và viền */
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #27b489; /* Hiệu ứng bóng cho focus */
+}
+
+[data-rmiz-modal-content] {
+  @apply bg-opacity-5 bg-black;
+}
+
+svg,
+path {
+  @apply transition-none duration-0;
 }
 
 .btn-custom {
-    @apply border-none px-4 py-2 bg-slate-300 rounded-lg hover:bg-primary hover:text-white transition-all duration-[250ms];
-}
+  @apply border-none px-4 py-2 cursor-pointer bg-slate-300 rounded-lg hover:bg-primary hover:text-white transition-all duration-300;
 
+}
 .px-default {
-    @apply px-4 md:px-16 lg:px-32
+  @apply px-4 md:px-16 lg:px-32;
 }
 
 .py-default {
-    @apply py-4;
+  @apply py-4;
 }
 
-
-
+.swiper-wrapper {
+  @apply items-center;
+}

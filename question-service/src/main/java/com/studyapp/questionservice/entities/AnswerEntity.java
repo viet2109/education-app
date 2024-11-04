@@ -26,5 +26,5 @@ public class AnswerEntity {
     private QuestionEntity question;
 
     @ElementCollection
-    List<String> filesUrl;
+    List<Long> fileIds;
 }

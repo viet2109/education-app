@@ -18,6 +18,7 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 
 @Slf4j
 @Service
@@ -26,23 +27,24 @@ import java.util.concurrent.CompletableFuture;
 public class FileService {
     MediaDao mediaDao;
 
-    public List<String> uploadFiles(List<MultipartFile> files) throws IOException {
-        List<CompletableFuture<String>> uploadFutures = files.parallelStream()
+    public List<Media> uploadFiles(List<MultipartFile> files) throws IOException {
+        List<CompletableFuture<Media>> uploadFutures = files.parallelStream()
                 .map(file -> CompletableFuture.supplyAsync(() -> {
                     try {
-                        return uploadFile(file);
+                        return uploadFile(file); // Assuming uploadFile() returns a Media object
                     } catch (IOException e) {
-                        return "Error uploading file " + file.getOriginalFilename() + ": " + e.getMessage();
+                        throw new CompletionException(new IOException("Error uploading file " + file.getOriginalFilename() + ": " + e.getMessage()));
                     }
                 }))
                 .toList();
 
+        // Collect the Media objects and handle any exceptions
         return uploadFutures.stream()
                 .map(CompletableFuture::join)
                 .toList();
     }
 
-    public String uploadFile(MultipartFile file) throws IOException {
+    public Media uploadFile(MultipartFile file) throws IOException {
         if (file.isEmpty()) {
             throw new IOException("Cannot upload an empty file: " + file.getOriginalFilename());
         }
@@ -62,9 +64,9 @@ public class FileService {
                     .sizeInBytes(fileSize)
                     .fileUrl(fileUrl)
                     .build();
-            mediaDao.save(media);
+            Media mediaSaved = mediaDao.save(media);
             log.info("Created file: {}", blob.getMediaLink());
-            return fileUrl;
+            return mediaSaved;
         } catch (IOException e) {
             log.error("Failed to upload file: {}", file.getOriginalFilename(), e);
             throw new IOException("Failed to upload file: " + file.getOriginalFilename(), e);
@@ -99,6 +101,10 @@ public class FileService {
                 log.error("Failed to delete file: {}", media.getFilename(), e);
             }
         });
+    }
+
+    public List<Media> findMediaByIds(List<Long> ids) {
+        return Streamable.of(mediaDao.findAllById(ids)).toList();
     }
 
 }

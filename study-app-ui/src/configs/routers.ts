@@ -2,9 +2,13 @@ const routers ={
     home: "/",
     login: "/login",
     signUp: "/signup",
+    instructionExam: "/exams/:id",
+    exams: "/exams",
     exam: "/exam",
     subject: "/subjects",
-    instructionExam: "/instructions",
+    settingProfile: "/settings/profile",
+    settingQuiz: "/settings/quizzes",
+    settingQuizDetails: "/settings/quizzes/:id",
     pageNotFound: "*",
 }
 

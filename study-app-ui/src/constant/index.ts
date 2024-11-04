@@ -1,0 +1,1 @@
+export const DEFAULT_SLATE_TIME = 1000 * 60 *30;

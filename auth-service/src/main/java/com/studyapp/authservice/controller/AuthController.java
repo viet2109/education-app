@@ -86,7 +86,7 @@ public class AuthController {
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/{id}/refresh-token")
+    @PostMapping("/users/{id}/refresh-token")
     public ResponseEntity<String> refreshToken(@PathVariable String id, HttpServletRequest request) {
         AtomicReference<String> sessionId = new AtomicReference<>("");
         Cookie[] cookies = request.getCookies();

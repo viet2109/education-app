@@ -1,5 +1,6 @@
 package com.studyapp.quizservice.client.question.dto.response;
 
+import com.studyapp.quizservice.client.file.dto.Media;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
@@ -13,5 +14,5 @@ import java.util.List;
 public class AnswerResponseDto {
     Long id;
     String content;
-    List<String> filesUrl;
+    List<Media> files;
 }

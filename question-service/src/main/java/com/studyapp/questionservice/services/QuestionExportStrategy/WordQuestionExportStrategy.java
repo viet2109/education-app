@@ -1,5 +1,6 @@
 package com.studyapp.questionservice.services.QuestionExportStrategy;
 
+import com.studyapp.questionservice.clients.file.dto.Media;
 import com.studyapp.questionservice.dto.response.AnswerResponseDto;
 import com.studyapp.questionservice.dto.response.QuestionResponseDto;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +19,7 @@ import java.util.regex.Pattern;
 
 @Slf4j
 public class WordQuestionExportStrategy implements QuestionExportStrategy {
+    
     @Override
     public byte[] exportQuestions(List<QuestionResponseDto> questionResponseDtos) {
         XWPFDocument document = new XWPFDocument();
@@ -38,15 +40,15 @@ public class WordQuestionExportStrategy implements QuestionExportStrategy {
                 questionParagraphRun.setText(String.format("Question %s: %s", questionIndex, questionContent.trim()));
                 questionParagraphRun.addBreak(BreakType.TEXT_WRAPPING);
                 char answerIndex = 'A';
-                if (!questionResponseDto.getFilesUrl().isEmpty()) {
-                    for (String fileUrl : questionResponseDto.getFilesUrl()) {
-                        URL url = URI.create(fileUrl).toURL();
+                if (!questionResponseDto.getFiles().isEmpty()) {
+                    for (Media media : questionResponseDto.getFiles()) {
+                        URL url = URI.create(media.getFileUrl()).toURL();
                         BufferedImage image = ImageIO.read(url);
                         if (image == null) {
                             log.error("This fileUrl is not image type");
                             return null;
                         }
-                        String imageFormat = getImageFormat(fileUrl);
+                        String imageFormat = getImageFormat(media.getFileType());
                         File tempFile = File.createTempFile("tempImage", "." + imageFormat);
                         ImageIO.write(image, imageFormat, tempFile);
                         try (InputStream imageData = new FileInputStream(tempFile)) {
@@ -65,15 +67,15 @@ public class WordQuestionExportStrategy implements QuestionExportStrategy {
                     questionParagraphRun.setText(String.format("%s: %s", answerIndex, answerContent.trim()));
                     questionParagraphRun.addBreak(BreakType.TEXT_WRAPPING);
                     answerIndex++;
-                    if (!answerResponseDto.getFilesUrl().isEmpty()) {
-                        for (String fileUrl : answerResponseDto.getFilesUrl()) {
-                            URL url = URI.create(fileUrl).toURL();
+                    if (!answerResponseDto.getFiles().isEmpty()) {
+                        for (Media media : answerResponseDto.getFiles()) {
+                            URL url = URI.create(media.getFileUrl()).toURL();
                             BufferedImage image = ImageIO.read(url);
                             if (image == null) {
                                 log.error("This fileUrl is not image type");
                                 return null;
                             }
-                            String imageFormat = getImageFormat(fileUrl);
+                            String imageFormat = getImageFormat(media.getFileType());
                             File tempFile = File.createTempFile("tempImage", "." + imageFormat);
                             ImageIO.write(image, imageFormat, tempFile);
                             try (InputStream imageData = new FileInputStream(tempFile)) {
@@ -103,21 +105,17 @@ public class WordQuestionExportStrategy implements QuestionExportStrategy {
 
     }
 
-    private String getImageFormat(String imageUrl) {
-        // Sử dụng regex để kiểm tra định dạng hình ảnh từ URL
-        log.info(imageUrl);
-        String regex = ".*\\.(jpg|jpeg|png|gif|bmp)(\\?.*)?$";
-        Pattern pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE);
-        Matcher matcher = pattern.matcher(imageUrl);
+    private String getImageFormat(String imageType) {
+
+        String regex = "/([^/]+)$";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(imageType);
 
         if (matcher.find()) {
-            return matcher.group(1); // Trả về định dạng hình ảnh
+            return matcher.group(1);
+        } else {
+            throw new IllegalArgumentException("Unsupported image format");
         }
-
-        log.info(matcher.group(1));
-
-        // Nếu không tìm thấy, bạn có thể kiểm tra Content-Type từ HTTP response nếu cần
-        throw new IllegalArgumentException("Unsupported image format");
     }
 
     private int getPictureType(String imageFormat) {
@@ -130,4 +128,5 @@ public class WordQuestionExportStrategy implements QuestionExportStrategy {
             default -> throw new IllegalArgumentException("Unsupported image format");
         };
     }
+
 }

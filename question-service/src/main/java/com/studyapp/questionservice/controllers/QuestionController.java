@@ -1,20 +1,23 @@
 package com.studyapp.questionservice.controllers;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.studyapp.questionservice.clients.quiz.QuizClient;
 import com.studyapp.questionservice.clients.quiz.response.QuizResponseDto;
-import com.studyapp.questionservice.dto.request.ListQuestionRequestDtoWrapper;
-import com.studyapp.questionservice.dto.request.QuestionRequestDto;
+import com.studyapp.questionservice.dto.request.*;
 import com.studyapp.questionservice.dto.response.QuestionResponseDto;
+import com.studyapp.questionservice.mapper.QuestionMapper;
 import com.studyapp.questionservice.services.QuestionExportService;
 import com.studyapp.questionservice.services.QuestionImportService;
 import com.studyapp.questionservice.services.QuestionService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.repository.query.Param;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -24,9 +27,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import java.io.IOException;
 import java.net.URI;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -37,12 +40,15 @@ import java.util.*;
 public class QuestionController {
     QuestionService questionService;
     QuestionImportService questionImportService;
-    QuestionExportService questionExportService;
     QuizClient quizClient;
+    QuestionExportService questionExportService;
+    QuestionMapper questionMapper;
+    ObjectMapper objectMapper;
 
-    @PostMapping("/bulk")
+
+    @PostMapping(value = "/bulk")
     public ResponseEntity<?> createListQuestion(
-            @ModelAttribute @Valid ListQuestionRequestDtoWrapper listDto) {
+            @ModelAttribute @Valid ListWrapper listDto) {
         questionService.createListQuestion(listDto.getQuestions());
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/list")
@@ -52,6 +58,71 @@ public class QuestionController {
         return ResponseEntity.created(location)
                 .body("Questions created successfully");
     }
+
+    @PostMapping(value = "/feign/bulk", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> createListQuestionByFeign(
+            @RequestPart("questionRequestFeignDtoList") String questionRequestFeignDtoListJson,  // Nhận JSON dưới dạng chuỗi
+            @RequestPart(value = "questionFiles", required = false) List<MultipartFile> questionFiles,
+            @RequestPart(value = "answerFiles", required = false) List<MultipartFile> answerFiles) throws JsonProcessingException {
+
+        // Chuyển đổi JSON string thành danh sách QuestionRequestFeignDto
+        List<QuestionRequestFeignDto> questionRequestFeignDtoList = objectMapper.readValue(questionRequestFeignDtoListJson, new TypeReference<List<QuestionRequestFeignDto>>() {
+        });
+        log.info("feign import");
+        // Chuyển DTO từ Feign sang DTO nội bộ
+        List<QuestionRequestDto> questionRequestDtoList = convertFeignDtoToLocalDto(questionRequestFeignDtoList, questionFiles, answerFiles);
+        log.info(questionRequestDtoList.toString());
+        // Gọi service để xử lý danh sách câu hỏi
+        questionService.createListQuestion(questionRequestDtoList);
+
+        // Tạo đường dẫn tới resource mới tạo
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/list")
+                .build()
+                .toUri();
+
+        return ResponseEntity.created(location)
+                .body("Questions created successfully");
+    }
+
+    // Phương thức chuyển đổi DTO từ Feign sang DTO nội bộ
+    private List<QuestionRequestDto> convertFeignDtoToLocalDto(List<QuestionRequestFeignDto> questionRequestFeignDtoList, List<MultipartFile> questionFiles, List<MultipartFile> answerFiles) {
+        List<QuestionRequestDto> result = questionRequestFeignDtoList.stream()
+                .map(questionMapper::feignDtoToLocalDto)
+                .collect(Collectors.toList());
+
+        int questionIndex = 0;
+
+        for (QuestionRequestFeignDto feignDto : questionRequestFeignDtoList) {
+            QuestionRequestDto questionRequestDto = result.get(questionIndex);
+
+            // Gán file cho câu hỏi
+            if (questionRequestDto.getFiles() == null) {
+                questionRequestDto.setFiles(new ArrayList<>());
+            }
+            for (Long index : feignDto.getFilesIndex()) {
+                questionRequestDto.getFiles().add(questionFiles.get(Math.toIntExact(index)));
+            }
+            int answerIndex = 0;
+
+            // Gán file cho câu trả lời
+            for (AnswerRequestFeignDto answerRequestFeignDto : feignDto.getListAnswer()) {
+                AnswerRequestDto answerRequestDto = questionRequestDto.getListAnswer().get(answerIndex);
+                if (answerRequestDto.getFiles() == null) {
+                    answerRequestDto.setFiles(new ArrayList<>());
+                }
+                for (Long index : answerRequestFeignDto.getFilesIndex()) {
+                    answerRequestDto.getFiles().add(answerFiles.get(Math.toIntExact(index)));
+                }
+                answerIndex++;
+            }
+
+            questionIndex++;
+        }
+
+        return result;
+    }
+
 
     @PostMapping
     public ResponseEntity<String> createQuestion(
@@ -67,9 +138,8 @@ public class QuestionController {
     }
 
     @GetMapping
-    public ResponseEntity<List<QuestionResponseDto>> getQuestionsByQuery(@RequestParam(required = false) @Valid @Size(min = 1, message = "List of questionsId must contain at least one questionId.") List<Long> ids,
-                                                                         @RequestParam(required = false) @Valid @Size(min = 1, message = "List of examId must contain at least one examId.") List<Long> examIds) {
-        return ResponseEntity.ok(questionService.getQuestionsByQuery(ids, examIds));
+    public ResponseEntity<List<QuestionResponseDto>> getQuestionsByQuery(@RequestParam(required = false) @Valid @Size(min = 1, message = "List of examId must contain at least one examId.") List<Long> examIds) {
+        return ResponseEntity.ok(questionService.getQuestionsByQuery(examIds));
     }
 
     @GetMapping("/{id}")
@@ -101,31 +171,22 @@ public class QuestionController {
     }
 
     @PostMapping(value = "/import/{examId}")
-    public ResponseEntity<?> createListQuestionByImport(@RequestPart MultipartFile file, @PathVariable Long examId) {
-        List<QuestionRequestDto> questionRequestDtoList = questionImportService.importQuestions(file, examId);
-        createListQuestion(ListQuestionRequestDtoWrapper.builder().questions(questionRequestDtoList).build());
-        return ResponseEntity.ok("You have import file successfully");
+    public ResponseEntity<?> createListQuestionByImport(@RequestPart MultipartFile file, @RequestParam Long examId) {
+        List<QuestionResponseDto> questionResponseDtos = questionImportService.importQuestions(file, examId);
+        return ResponseEntity.ok().body(questionResponseDtos);
     }
 
     @GetMapping("/export/{examId}")
     public ResponseEntity<byte[]> exportQuestions(@PathVariable Long examId, @RequestParam("fileType") String fileType) {
         QuizResponseDto quizResponseDto = quizClient.getExamById(examId).getBody();
 
-        // Kiểm tra nếu quizResponseDto là null
-        if (quizResponseDto == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
-        }
-
         // Kiểm tra nếu fileType null hoặc không đúng định dạng
         if (fileType == null || (!fileType.equals("word") && !fileType.equals("excel"))) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
         }
 
-        List<QuestionResponseDto> questions = quizResponseDto.getListQuestion();
-        byte[] content = questionExportService.exportQuestions(questions, fileType);
-
-        // Log kích thước thay vì nội dung file
-        log.info("Exported file size: " + content.length);
+        assert quizResponseDto != null;
+        byte[] content = questionExportService.exportQuestions(quizResponseDto.getListQuestion(), fileType);
 
         HttpHeaders headers = getHttpHeaders(fileType, quizResponseDto);
 
@@ -154,5 +215,6 @@ public class QuestionController {
 
         return headers;
     }
+
 
 }
