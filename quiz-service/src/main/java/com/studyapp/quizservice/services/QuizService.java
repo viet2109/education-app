@@ -5,23 +5,28 @@ import com.studyapp.quizservice.client.question.dto.response.QuestionResponseDto
 import com.studyapp.quizservice.client.user.UserClient;
 import com.studyapp.quizservice.dao.QuizDao;
 import com.studyapp.quizservice.dto.request.QuizRequestDto;
+import com.studyapp.quizservice.dto.response.CategoryDto;
 import com.studyapp.quizservice.dto.response.QuizResponseDto;
 import com.studyapp.quizservice.entities.QuizEntity;
 import com.studyapp.quizservice.enums.Category;
 import com.studyapp.quizservice.enums.QuizError;
 import com.studyapp.quizservice.exception.QuizException;
 import com.studyapp.quizservice.mapper.QuizMapper;
+import com.studyapp.quizservice.specification.QuizSpecification;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.data.util.Streamable;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
@@ -32,34 +37,8 @@ public class QuizService {
     UserClient userClient;
     QuizMapper quizMapper;
 
-    public List<Category> getAllCategory() {
-        return Streamable.of(quizDao.findAll()).toList().stream().map(QuizEntity::getCategory).toList();
-    }
-
-    public List<QuizResponseDto> getAllExam() {
-        // Lấy danh sách bài thi và chuyển đổi sang DTO
-        List<QuizResponseDto> responseDto = Streamable.of(quizDao.findAll()).toList().stream()
-                .map(quizMapper::entityToRpDto).toList();
-
-        // Lấy danh sách ID của các bài thi
-        List<Long> quizIds = responseDto.stream().map(QuizResponseDto::getId).toList();
-
-        // Gọi Feign Client một lần với tất cả các ID bài thi nếu danh sách không rỗng
-        List<QuestionResponseDto> allQuestions = quizIds.isEmpty() ? Collections.emptyList()
-                : questionClient.getQuestionsByQuery(null, quizIds).getBody();
-
-        if (allQuestions == null) {
-            allQuestions = Collections.emptyList();
-        }
-
-        // Gán câu hỏi vào từng bài thi tương ứng
-        Map<Long, List<QuestionResponseDto>> questionsByExamId = allQuestions.stream()
-                .collect(Collectors.groupingBy(QuestionResponseDto::getExamId));
-
-        responseDto.forEach(quiz -> quiz.setListQuestion(
-                questionsByExamId.getOrDefault(quiz.getId(), Collections.emptyList())));
-
-        return responseDto;
+    public List<CategoryDto> getAllCategories() {
+        return Category.getAll();
     }
 
     public QuizResponseDto createExam(QuizRequestDto requestDto) {
@@ -70,8 +49,7 @@ public class QuizService {
     public QuizResponseDto getExamById(Long id) {
         QuizResponseDto quizResponseDto = quizMapper.entityToRpDto(quizDao.findById(id).orElseThrow(() -> new QuizException(QuizError.EXAM_NOT_FOUND)));
 
-        List<QuestionResponseDto> allQuestions = questionClient.getQuestionsByQuery(null, Collections.singletonList(id)).getBody();
-
+        List<QuestionResponseDto> allQuestions = questionClient.getQuestionsByQuery(Collections.singletonList(id)).getBody();
         if (allQuestions == null) {
             allQuestions = Collections.emptyList();
         }
@@ -85,4 +63,57 @@ public class QuizService {
         quizDao.deleteById(id);
         questionClient.deleteQuestionByIdsOrExamId(null, id);
     }
+
+    public Page<QuizResponseDto> getQuizzesByQuery(String title, List<String> categoryList, String createdBy,
+                                                   Integer minDuration, Integer maxDuration,
+                                                   LocalDateTime expiratedAtAfter, LocalDateTime expiratedAtBefore,
+                                                   Pageable pageable) {
+        Specification<QuizEntity> spec = Specification.where(null);
+
+        if (title != null && !title.isEmpty()) {
+            spec = spec.and(QuizSpecification.hasTitle(title));
+        }
+
+        if (categoryList != null && !categoryList.isEmpty()) {
+            List<Category> categories = categoryList.stream()
+                    .map(String::toUpperCase)
+                    .map(catStr -> {
+                        try {
+                            return Category.valueOf(catStr);
+                        } catch (IllegalArgumentException e) {
+                            // Log or handle invalid categories (in this case, ignoring invalid categories)
+                            return null;
+                        }
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+
+            if (!categories.isEmpty()) {
+                spec = spec.and(QuizSpecification.hasAnyCategory(categories));
+            }
+        }
+
+        if (createdBy != null && !createdBy.isEmpty()) {
+            spec = spec.and(QuizSpecification.createdBy(createdBy));
+        }
+
+        if (minDuration != null) {
+            spec = spec.and(QuizSpecification.hasDurationGreaterThanOrEqual(minDuration));
+        }
+
+        if (maxDuration != null) {
+            spec = spec.and(QuizSpecification.hasDurationLessThanOrEqual(maxDuration));
+        }
+
+        if (expiratedAtAfter != null) {
+            spec = spec.and(QuizSpecification.expiratedAtAfter(expiratedAtAfter));
+        }
+
+        if (expiratedAtBefore != null) {
+            spec = spec.and(QuizSpecification.expiratedAtBefore(expiratedAtBefore));
+        }
+
+        return quizDao.findAll(spec, pageable).map(quizMapper::entityToRpDto);
+    }
+
 }

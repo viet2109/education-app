@@ -1,15 +1,10 @@
 package com.studyapp.questionservice.services;
 
-import com.studyapp.questionservice.dto.request.QuestionRequestDto;
 import com.studyapp.questionservice.dto.response.QuestionResponseDto;
 import com.studyapp.questionservice.services.QuestionExportStrategy.ExcelQuestionExportStrategy;
 import com.studyapp.questionservice.services.QuestionExportStrategy.QuestionExportStrategy;
 import com.studyapp.questionservice.services.QuestionExportStrategy.WordQuestionExportStrategy;
-import com.studyapp.questionservice.services.QuestionImportStrategy.ExcelQuestionImportStrategy;
-import com.studyapp.questionservice.services.QuestionImportStrategy.QuestionImportStrategy;
-import com.studyapp.questionservice.services.QuestionImportStrategy.WordQuestionImportStrategy;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
 import java.util.List;

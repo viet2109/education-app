@@ -37,7 +37,7 @@ public class QuestionEntity {
     private LocalDateTime updatedAt;
 
     @ElementCollection
-    List<String> filesUrl;
+    List<Long> fileIds;
 
     @Column(nullable = false)
     private Long examId;

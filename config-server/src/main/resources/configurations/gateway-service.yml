@@ -1,5 +1,9 @@
 server:
   port: 8222
+  compression:
+    enabled: true
+    mime-types: text/html, text/xml, text/plain, text/css, application/json, application/javascript
+    min-response-size: 1024
 
 app:
   apiPrefix: /api/v1
@@ -14,6 +18,19 @@ spring:
         connectTimeout: 5000
         responseTimeout: 20000  # Thời gian chờ của Gateway là 20 giây
         wiretap: true
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowed-origins:
+              - "http://localhost:5173"
+            allowed-headers:
+              - "*"
+            allow-credentials: true
+            allowed-methods:
+              - "*"
+            max-age: 3600
+            exposed-headers:
+              - "Content-Disposition"
       routes:
         - id: userService
           uri: lb://USER-SERVICE

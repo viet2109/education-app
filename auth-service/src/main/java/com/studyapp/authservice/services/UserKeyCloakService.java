@@ -59,11 +59,9 @@ public class UserKeyCloakService {
 
         try (Response response = usersResource.create(userRepresentation)) {
             HttpStatus httpStatus = HttpStatus.valueOf(response.getStatus());
-            log.info("status {}", response.getStatus());
             if (httpStatus.is4xxClientError()) {
                 throw new AuthException(AuthError.USER_ALREADY_EXISTS);
             }
-            log.info("You have created account successfully!!!");
         } catch (AuthException exception) {
             throw exception;
         } catch (Exception exception) {
@@ -199,7 +197,7 @@ public class UserKeyCloakService {
             cacheClient.saveRefreshToken(userId, sessionId, tokenResponse.getRefreshToken());
             log.info(tokenResponse.getRefreshToken());
 
-            responseMap.put("access_token", tokenResponse.getToken());
+            responseMap.put("accessToken", tokenResponse.getToken());
             responseMap.put("user", userResponse);
             responseMap.put("sessionId", sessionId);
 
@@ -211,7 +209,6 @@ public class UserKeyCloakService {
         }
         return responseMap;
     }
-
 
     private boolean isVerifiedEmail(String email) {
         return getUsersResource().searchByEmail(email, true).stream().anyMatch(AbstractUserRepresentation::isEmailVerified);

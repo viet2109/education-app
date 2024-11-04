@@ -19,5 +19,6 @@ public class QuizResponseDto {
     Category category;
     Integer duration;
     LocalDateTime expiratedAt;
+    LocalDateTime updatedAt;
     List<QuestionResponseDto> listQuestion;
 }

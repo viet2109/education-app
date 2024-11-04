@@ -43,6 +43,9 @@ public class QuizEntity {
         if (duration == null) {
             duration = 3600;
         }
+        if (category == null) {
+            category = Category.OTHERS;
+        }
     }
 
 }
