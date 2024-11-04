@@ -9,21 +9,22 @@ import { Media } from "../types";
 import { FaFileLines } from "react-icons/fa6";
 
 interface Props {
-  files: Media[];
-  className?: string
+  files: (File | Media)[];
+  className?: string;
 }
 
 function QuizMedia({ files, className }: Props) {
   const groupedFiles = files.reduce((group, file) => {
-    const mainType = file.fileType.split("/")[0];
-    if (!group[mainType]) {
-      group[mainType] = [];
+    if ("fileType" in file) {
+      const mainType = file.fileType.split("/")[0];
+      if (!group[mainType]) {
+        group[mainType] = [];
+      }
+      group[mainType].push(file);
     }
-    group[mainType].push(file);
     return group;
   }, {} as Record<string, Media[]>);
   console.log(files.length);
-  
 
   return (
     <div className={`flex flex-col gap-y-8 cursor-auto ${className}`}>
@@ -50,17 +51,17 @@ function QuizMedia({ files, className }: Props) {
             }}
           >
             {groupedFiles.image.map((file) => (
-                <SwiperSlide key={file.id}>
-                  <Zoom>
-                    <div className="flex justify-center">
-                      <img
-                        src={file.fileUrl}
-                        alt={file.filename}
-                        className="w-20"
-                      />
-                    </div>
-                  </Zoom>
-                </SwiperSlide>
+              <SwiperSlide key={file.id}>
+                <Zoom>
+                  <div className="flex justify-center">
+                    <img
+                      src={file.fileUrl}
+                      alt={file.filename}
+                      className="w-20"
+                    />
+                  </div>
+                </Zoom>
+              </SwiperSlide>
             ))}
           </Swiper>
         </div>
