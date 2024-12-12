@@ -13,7 +13,6 @@ interface Props {
 
 function Pagianate(props: Props) {
   const { onPageChange, itemsLength, numberItemOnPage, initialPage } = props;
-  console.log(initialPage);
 
   return (
     <ReactPaginate
@@ -22,7 +21,7 @@ function Pagianate(props: Props) {
       pageLinkClassName="w-10 aspect-square grid place-items-center hover:bg-gray-300  ease-in-out"
       pageClassName="rounded-full overflow-hidden min-w-fit"
       activeLinkClassName="bg-primary text-white hover:!bg-primary cursor-not-allowed"
-      pageCount={Math.ceil(itemsLength / numberItemOnPage)}
+      pageCount={Math.max(1, Math.ceil(itemsLength / numberItemOnPage))}
       previousLabel={<MdKeyboardDoubleArrowLeft size={28} />}
       nextLabel={<MdKeyboardDoubleArrowRight size={28} />}
       onPageChange={(e) => {

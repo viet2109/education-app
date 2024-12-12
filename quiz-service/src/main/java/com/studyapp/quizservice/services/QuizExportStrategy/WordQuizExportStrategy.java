@@ -1,47 +1,58 @@
-package com.studyapp.questionservice.services.QuestionExportStrategy;
+package com.studyapp.quizservice.services.QuizExportStrategy;
 
-import com.studyapp.questionservice.clients.file.dto.Media;
-import com.studyapp.questionservice.dto.response.AnswerResponseDto;
-import com.studyapp.questionservice.dto.response.QuestionResponseDto;
+import com.studyapp.quizservice.client.file.dto.Media;
+import com.studyapp.quizservice.client.question.dto.response.AnswerChangeResponseDto;
+import com.studyapp.quizservice.client.question.dto.response.QuestionChangeResponseDto;
+import com.studyapp.quizservice.dto.response.QuizChangeResponseDto;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.util.Units;
-import org.apache.poi.xwpf.usermodel.*;
+import org.apache.poi.xwpf.usermodel.BreakType;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFRun;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URI;
 import java.net.URL;
-import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Slf4j
-public class WordQuestionExportStrategy implements QuestionExportStrategy {
-    
+public class WordQuizExportStrategy implements QuizExportStrategy {
+
     @Override
-    public byte[] exportQuestions(List<QuestionResponseDto> questionResponseDtos) {
+    public byte[] exportQuiz(QuizChangeResponseDto quizResponseDto) {
         XWPFDocument document = new XWPFDocument();
         ByteArrayOutputStream out = null;
+        String keyQuizStart = "Quiz:";
+        String keyQuizCategoryStart = "Category:";
+        String keyQuestionStart = "Question:";
+        String keyAnswerStart = "Answer:";
+        String keyImageStart = "Images:";
+        String imageSplit = "-";
+        String keyCorrectAnswer = "|";
+
         try {
             XWPFParagraph title = document.createParagraph();
-            title.setAlignment(ParagraphAlignment.CENTER);
             XWPFRun titleRun = title.createRun();
-            titleRun.setText("List of question");
-            titleRun.setFontSize(18);
-            titleRun.setBold(true);
+            titleRun.setText(String.format("%s %s", keyQuizStart, quizResponseDto.getTitle()));
+            titleRun.addBreak(BreakType.TEXT_WRAPPING);
+            titleRun.setText(String.format("%s %s", keyQuizCategoryStart, quizResponseDto.getCategory()));
 
-            int questionIndex = 1;
-            for (QuestionResponseDto questionResponseDto : questionResponseDtos) {
+            for (QuestionChangeResponseDto questionResponseDto : quizResponseDto.getListQuestion()) {
                 String questionContent = questionResponseDto.getContent();
                 XWPFParagraph questionParagraph = document.createParagraph();
                 XWPFRun questionParagraphRun = questionParagraph.createRun();
-                questionParagraphRun.setText(String.format("Question %s: %s", questionIndex, questionContent.trim()));
+                questionParagraphRun.setText(String.format("%s %s", keyQuestionStart, questionContent.trim()));
                 questionParagraphRun.addBreak(BreakType.TEXT_WRAPPING);
-                char answerIndex = 'A';
+
                 if (!questionResponseDto.getFiles().isEmpty()) {
-                    for (Media media : questionResponseDto.getFiles()) {
+                    questionParagraphRun.setText(String.format("%s ", keyImageStart));
+                    for (int i = 0; i < questionResponseDto.getFiles().size(); i++) {
+                        Media media = questionResponseDto.getFiles().get(i);
                         URL url = URI.create(media.getFileUrl()).toURL();
                         BufferedImage image = ImageIO.read(url);
                         if (image == null) {
@@ -54,7 +65,9 @@ public class WordQuestionExportStrategy implements QuestionExportStrategy {
                         try (InputStream imageData = new FileInputStream(tempFile)) {
                             int pictureType = getPictureType(imageFormat);
                             questionParagraphRun.addPicture(imageData, pictureType, tempFile.getName(), Units.toEMU(100), Units.toEMU(50));
-                            questionParagraphRun.addTab();
+                            if (i < questionResponseDto.getFiles().size() - 1) {
+                                questionParagraphRun.setText(imageSplit);
+                            }
                         } catch (InvalidFormatException e) {
                             log.error("Error when format type picture: {}", e.getMessage());
                         }
@@ -62,13 +75,17 @@ public class WordQuestionExportStrategy implements QuestionExportStrategy {
                     }
                     questionParagraphRun.addBreak(BreakType.TEXT_WRAPPING);
                 }
-                for (AnswerResponseDto answerResponseDto : questionResponseDto.getListAnswer()) {
+
+                for (AnswerChangeResponseDto answerResponseDto : questionResponseDto.getListAnswer()) {
                     String answerContent = answerResponseDto.getContent();
-                    questionParagraphRun.setText(String.format("%s: %s", answerIndex, answerContent.trim()));
+                    questionParagraphRun.setText(String.format("%s %s %s %s", keyAnswerStart, answerContent.trim(), keyCorrectAnswer, answerResponseDto.getIsCorrect()));
                     questionParagraphRun.addBreak(BreakType.TEXT_WRAPPING);
-                    answerIndex++;
+
                     if (!answerResponseDto.getFiles().isEmpty()) {
-                        for (Media media : answerResponseDto.getFiles()) {
+                        questionParagraphRun.setText(String.format("%s ", keyImageStart));
+
+                        for (int i = 0; i < answerResponseDto.getFiles().size(); i++) {
+                            Media media = answerResponseDto.getFiles().get(i);
                             URL url = URI.create(media.getFileUrl()).toURL();
                             BufferedImage image = ImageIO.read(url);
                             if (image == null) {
@@ -81,7 +98,9 @@ public class WordQuestionExportStrategy implements QuestionExportStrategy {
                             try (InputStream imageData = new FileInputStream(tempFile)) {
                                 int pictureType = getPictureType(imageFormat);
                                 questionParagraphRun.addPicture(imageData, pictureType, tempFile.getName(), Units.toEMU(100), Units.toEMU(50));
-                                questionParagraphRun.addTab();
+                                if (i < answerResponseDto.getFiles().size() - 1) {
+                                    questionParagraphRun.setText(imageSplit);
+                                }
                             } catch (InvalidFormatException e) {
                                 log.error("Error when format type picture: {}", e.getMessage());
                             }
@@ -90,7 +109,6 @@ public class WordQuestionExportStrategy implements QuestionExportStrategy {
                         questionParagraphRun.addBreak(BreakType.TEXT_WRAPPING);
                     }
                 }
-                questionIndex++;
             }
 
             out = new ByteArrayOutputStream();
@@ -102,11 +120,9 @@ public class WordQuestionExportStrategy implements QuestionExportStrategy {
             log.error("Error occur when export: {}", e.getMessage());
         }
         return out != null ? out.toByteArray() : new byte[0];
-
     }
 
     private String getImageFormat(String imageType) {
-
         String regex = "/([^/]+)$";
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(imageType);
@@ -119,7 +135,6 @@ public class WordQuestionExportStrategy implements QuestionExportStrategy {
     }
 
     private int getPictureType(String imageFormat) {
-
         return switch (imageFormat.toLowerCase()) {
             case "png" -> XWPFDocument.PICTURE_TYPE_PNG;
             case "jpg", "jpeg" -> XWPFDocument.PICTURE_TYPE_JPEG;
@@ -128,5 +143,4 @@ public class WordQuestionExportStrategy implements QuestionExportStrategy {
             default -> throw new IllegalArgumentException("Unsupported image format");
         };
     }
-
 }

@@ -21,7 +21,8 @@ const InputField: FC<InputFieldProps> = (props) => {
     }
 
     // Đặt lại type dựa vào trạng thái hiển thị/ẩn mật khẩu
-    const inputType = type === "password" && isHidePass ? "password" : "text";
+    let inputType = type === "password" && isHidePass ? "password" : "text";
+    if (type !== "password") inputType = type;
 
     return (
         <div className={"relative w-full"}>

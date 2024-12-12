@@ -16,7 +16,7 @@ spring:
           enabled: true
       httpClient:
         connectTimeout: 5000
-        responseTimeout: 20000  # Thời gian chờ của Gateway là 20 giây
+        responseTimeout: 60000  # Thời gian chờ của Gateway là 60 giây
         wiretap: true
       globalcors:
         corsConfigurations:
@@ -126,7 +126,7 @@ resilience4j:
       fileConfig:
         slidingWindowSize: 20
         failureRateThreshold: 50
-        waitDurationInOpenState: 20000
+        waitDurationInOpenState: 60000
         permittedNumberOfCallsInHalfOpenState: 5
         minimumNumberOfCalls: 5
         slowCallDurationThreshold: 1000
@@ -149,7 +149,7 @@ resilience4j:
   timelimiter:
     configs:
       default:
-        timeoutDuration: 20s  # Đồng bộ với thời gian chờ của Gateway
+        timeoutDuration: 60s  # Đồng bộ với thời gian chờ của Gateway
     instances:
       userServiceTL:
         baseConfig: default

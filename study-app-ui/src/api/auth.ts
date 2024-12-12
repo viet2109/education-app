@@ -28,8 +28,6 @@ export const register = async (signUpRequest: SignUpRequest) => {
   try {
     await api.post("/auth/signup", signUpRequest);
   } catch (error: any) {
-    
-
     return Promise.reject(error); // Trả lỗi về cho caller
   } finally {
     store.dispatch(fetchEnd());

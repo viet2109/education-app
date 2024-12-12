@@ -19,6 +19,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Slf4j
 @Service
@@ -27,43 +29,64 @@ import java.util.concurrent.CompletionException;
 public class FileService {
     MediaDao mediaDao;
 
-    public List<Media> uploadFiles(List<MultipartFile> files) throws IOException {
-        List<CompletableFuture<Media>> uploadFutures = files.parallelStream()
-                .map(file -> CompletableFuture.supplyAsync(() -> {
-                    try {
-                        return uploadFile(file); // Assuming uploadFile() returns a Media object
-                    } catch (IOException e) {
-                        throw new CompletionException(new IOException("Error uploading file " + file.getOriginalFilename() + ": " + e.getMessage()));
-                    }
-                }))
+    public List<Media> uploadFiles(List<MultipartFile> files) {
+        // Loại bỏ các file null hoặc trùng lặp trong danh sách
+        List<MultipartFile> distinctFiles = files.stream()
+                .filter(file -> file != null && !file.isEmpty()) // Loại bỏ file null hoặc rỗng
+                .distinct() // Loại bỏ các file trùng lặp
                 .toList();
+        log.info("files size: {}", distinctFiles.size());
+        // Sử dụng ExecutorService để quản lý song song hóa
+        ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
-        // Collect the Media objects and handle any exceptions
-        return uploadFutures.stream()
-                .map(CompletableFuture::join)
-                .toList();
+        try {
+            // Sử dụng CompletableFuture để xử lý song song upload
+            List<CompletableFuture<Media>> uploadFutures = distinctFiles.stream()
+                    .map(file -> CompletableFuture.supplyAsync(() -> {
+                        try {
+                            return uploadFile(file);
+                        } catch (IOException e) {
+                            throw new CompletionException(new IOException("Error uploading file: " + file.getOriginalFilename(), e));
+                        }
+                    }, executorService))
+                    .toList();
+
+            // Chờ tất cả các tác vụ hoàn thành và thu thập kết quả
+            return uploadFutures.stream()
+                    .map(CompletableFuture::join) // Ghi log lỗi nếu cần xử lý riêng
+                    .toList();
+        } finally {
+            // Đảm bảo ExecutorService được tắt sau khi hoàn tất
+            executorService.shutdown();
+        }
     }
 
     public Media uploadFile(MultipartFile file) throws IOException {
+        // Kiểm tra nếu file rỗng và ném ngoại lệ
         if (file.isEmpty()) {
             throw new IOException("Cannot upload an empty file: " + file.getOriginalFilename());
         }
 
+        // Tạo tên file duy nhất
         String fileName = UUID.randomUUID() + "-" + file.getOriginalFilename();
-        String typeFile = file.getContentType();
+        String fileType = file.getContentType();
         long fileSize = file.getSize();
         Bucket bucket = StorageClient.getInstance().bucket();
 
-        // Upload file using InputStream to avoid memory issues
+        // Upload file bằng InputStream để tránh lỗi tràn bộ nhớ
         try (InputStream inputStream = file.getInputStream()) {
-            Blob blob = bucket.create(fileName, inputStream, typeFile);
+            Blob blob = bucket.create(fileName, inputStream, fileType);
             String fileUrl = "https://firebasestorage.googleapis.com/v0/b/" + bucket.getName() + "/o/" + fileName + "?alt=media";
+
+            // Tạo đối tượng Media để lưu thông tin file
             Media media = Media.builder()
                     .filename(fileName)
-                    .fileType(typeFile)
+                    .fileType(fileType)
                     .sizeInBytes(fileSize)
                     .fileUrl(fileUrl)
                     .build();
+
+            // Lưu vào cơ sở dữ liệu
             Media mediaSaved = mediaDao.save(media);
             log.info("Created file: {}", blob.getMediaLink());
             return mediaSaved;

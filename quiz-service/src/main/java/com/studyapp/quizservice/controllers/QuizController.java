@@ -2,6 +2,7 @@ package com.studyapp.quizservice.controllers;
 
 import com.studyapp.quizservice.dto.request.QuizRequestDto;
 import com.studyapp.quizservice.dto.response.CategoryDto;
+import com.studyapp.quizservice.dto.response.QuizChangeResponseDto;
 import com.studyapp.quizservice.dto.response.QuizResponseDto;
 import com.studyapp.quizservice.services.QuizExportService;
 import com.studyapp.quizservice.services.QuizImportService;
@@ -11,7 +12,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.data.domain.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -21,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.io.IOException;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -42,6 +47,10 @@ public class QuizController {
         return ResponseEntity.ok(quizService.getExamById(id));
     }
 
+    @GetMapping("/settings/{id}")
+    public ResponseEntity<QuizChangeResponseDto> getExamMangeById(@PathVariable Long id) {
+        return ResponseEntity.ok(quizService.getExamManageById(id));
+    }
 
     @PostMapping
     public ResponseEntity<QuizResponseDto> createQuiz(@RequestBody QuizRequestDto requestDto) {
@@ -74,6 +83,62 @@ public class QuizController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime expiratedAtBefore,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size,
+            @RequestParam(defaultValue = "id,asc") String[] sort,
+            @RequestParam(defaultValue = "true") boolean paged
+    ) {
+        try {
+            Map<String, Object> response = new HashMap<>();
+
+            if (paged) {
+                // Xử lý phân trang
+                List<Sort.Order> orders = new ArrayList<>();
+                if (sort[0].contains(",")) {
+                    for (String sortOrder : sort) {
+                        String[] _sort = sortOrder.split(",");
+                        orders.add(new Sort.Order(getSortDirection(_sort[1]), _sort[0]));
+                    }
+                } else {
+                    orders.add(new Sort.Order(getSortDirection(sort[1]), sort[0]));
+                }
+
+                Pageable pagingSort = PageRequest.of(page, size, Sort.by(orders));
+                Page<QuizResponseDto> pageQuizzes = quizService.getQuizzesByQuery(
+                        title, category, createdBy, minDuration, maxDuration, expiratedAtAfter, expiratedAtBefore, pagingSort
+                );
+
+                Map<String, Object> pagination = new HashMap<>();
+                pagination.put("currentPage", pageQuizzes.getNumber());
+                pagination.put("pageSize", pageQuizzes.getSize());
+                pagination.put("totalItems", pageQuizzes.getTotalElements());
+                pagination.put("totalPages", pageQuizzes.getTotalPages());
+                response.put("data", pageQuizzes.getContent());
+                response.put("pagination", pagination);
+            } else {
+                // Không phân trang
+                List<QuizResponseDto> quizzes = quizService.getQuizzesByQueryNoPagination(
+                        title, category, createdBy, minDuration, maxDuration, expiratedAtAfter, expiratedAtBefore
+                );
+                response.put("data", quizzes);
+            }
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            // Xử lý ngoại lệ
+            return ResponseEntity.status(500).body(null);
+        }
+    }
+
+    @GetMapping("/settings")
+    public ResponseEntity<Map<String, Object>> getManageQuizzesByQuery(
+            @RequestParam(required = false) String title,
+            @RequestParam(required = false) List<String> category,
+            @RequestParam(required = false) String createdBy,
+            @RequestParam(required = false) Integer minDuration,
+            @RequestParam(required = false) Integer maxDuration,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime expiratedAtAfter,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime expiratedAtBefore,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size,
             @RequestParam(defaultValue = "id,asc") String[] sort
     ) {
         try {
@@ -93,11 +158,11 @@ public class QuizController {
 
             Pageable pagingSort = PageRequest.of(page, size, Sort.by(orders));
 
-            Page<QuizResponseDto> pageQuizzes = quizService.getQuizzesByQuery(
+            Page<QuizChangeResponseDto> pageQuizzes = quizService.getQuizzesManageByQuery(
                     title, category, createdBy, minDuration, maxDuration, expiratedAtAfter, expiratedAtBefore, pagingSort
             );
 
-            List<QuizResponseDto> quizzes = pageQuizzes.getContent();
+            List<QuizChangeResponseDto> quizzes = pageQuizzes.getContent();
             Map<String, Object> response = new HashMap<>();
             Map<String, Object> pagination = new HashMap<>();
             pagination.put("currentPage", pageQuizzes.getNumber());
@@ -130,8 +195,8 @@ public class QuizController {
     }
 
     @GetMapping("/{examId}/export")
-    public ResponseEntity<byte[]> exportQuestions(@PathVariable Long examId, @RequestParam(defaultValue = "word") String fileType) {
-        QuizResponseDto quizResponseDto = quizService.getExamById(examId);
+    public ResponseEntity<byte[]> exportQuestions(@PathVariable Long examId, @RequestParam(defaultValue = "word") String fileType) throws IOException {
+        QuizChangeResponseDto quizResponseDto = quizService.getExamManageById(examId);
 
         // Kiểm tra nếu fileType null hoặc không đúng định dạng
         if (fileType == null || (!fileType.equals("word") && !fileType.equals("excel"))) {
@@ -147,7 +212,7 @@ public class QuizController {
                 .body(content);
     }
 
-    private HttpHeaders getHttpHeaders(String fileType, QuizResponseDto quizResponseDto) {
+    private HttpHeaders getHttpHeaders(String fileType, QuizChangeResponseDto quizResponseDto) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
 

@@ -9,19 +9,17 @@ import { Media } from "../types";
 import { FaFileLines } from "react-icons/fa6";
 
 interface Props {
-  files: (File | Media)[];
+  files: (Media | File)[];
   className?: string;
 }
 
 function QuizMedia({ files, className }: Props) {
   const groupedFiles = files.reduce((group, file) => {
-    if ("fileType" in file) {
-      const mainType = file.fileType.split("/")[0];
-      if (!group[mainType]) {
-        group[mainType] = [];
-      }
-      group[mainType].push(file);
+    const mainType = (file as Media).fileType.split("/")[0];
+    if (!group[mainType]) {
+      group[mainType] = [];
     }
+    group[mainType].push(file as Media);
     return group;
   }, {} as Record<string, Media[]>);
   console.log(files.length);

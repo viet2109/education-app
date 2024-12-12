@@ -1,6 +1,7 @@
 package com.studyapp.quizservice.mapper;
 
 import com.studyapp.quizservice.dto.request.QuizRequestDto;
+import com.studyapp.quizservice.dto.response.QuizChangeResponseDto;
 import com.studyapp.quizservice.dto.response.QuizResponseDto;
 import com.studyapp.quizservice.entities.QuizEntity;
 import org.mapstruct.Mapper;
@@ -9,4 +10,5 @@ import org.mapstruct.Mapper;
 public interface QuizMapper {
     QuizEntity rqDtoToEntity(QuizRequestDto dto);
     QuizResponseDto entityToRpDto(QuizEntity entity);
+    QuizChangeResponseDto entityToChangeRpDto(QuizEntity entity);
 }

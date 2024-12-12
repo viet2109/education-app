@@ -5,6 +5,8 @@ import com.studyapp.fileservice.service.FileService;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -18,10 +20,11 @@ import java.util.List;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class FileController {
 
+    private static final Logger log = LoggerFactory.getLogger(FileController.class);
     FileService fileService;
 
     @PostMapping("/upload")
-    public ResponseEntity<List<Media>> uploadFiles(@RequestPart("files") List<MultipartFile> files) throws IOException {
+    public ResponseEntity<List<Media>> uploadFiles(@RequestPart("files") List<MultipartFile> files) {
         return ResponseEntity.ok(fileService.uploadFiles(files));
     }
 

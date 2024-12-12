@@ -1,27 +1,63 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FaEdit } from "react-icons/fa";
 import { FaPlus, FaRegTrashCan } from "react-icons/fa6";
+import { TbFileExport } from "react-icons/tb";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
-import { deleteQuiz, exportQuiz, fetchQuizzes, importQuiz } from "../api/quiz";
+import * as Yup from "yup";
+import {
+  createQuiz,
+  deleteQuiz,
+  exportQuiz,
+  fetchQuizzes,
+  importQuiz,
+} from "../api/quiz";
+import Modal from "../components/modal";
 import NoDataModel from "../components/noDataModel";
 import Pagianate from "../components/paginate";
 import routers from "../configs/routers";
 import { DEFAULT_SLATE_TIME } from "../constant";
 import { formatLocalDate } from "../helper/formatLocalDate";
 import { RootState } from "../redux/store";
-import { QuizPaginationFilter } from "../types";
-import { TbFileExport } from "react-icons/tb";
+import { QuizPaginationFilter, QuizRequest } from "../types";
+import { FastField, Form, Formik } from "formik";
+import InputField from "../components/inputField";
+import Select from "react-select";
+
+const quizSchema = Yup.object().shape({
+  title: Yup.string().required("The title is mandatory"),
+  category: Yup.string(),
+  duration: Yup.number().min(60, "The duration must be at least 1 minute"),
+  expiratedAt: Yup.date().min(
+    new Date(),
+    "The expiration date must be in the future"
+  ),
+});
 
 function SettingQuiz() {
   const navigate = useNavigate();
   const user = useSelector((state: RootState) => state.auth.user);
+
   const queryParams = useMemo(
     () => new URLSearchParams(location.search),
     [location.search]
   );
+
+  const [categories] = useState([
+    { value: "MATHEMATICS", label: "Mathematics" },
+    { value: "LITERATURE", label: "Literature" },
+    { value: "NATURAL_SCIENCES", label: "Natural Sciences" },
+    { value: "SOCIAL_SCIENCES", label: "Social Sciences" },
+    { value: "FOREIGN_LANGUAGES", label: "Foreign Languages" },
+    { value: "INFORMATION_TECHNOLOGY", label: "Information Technology" },
+    { value: "ART", label: "Art" },
+    { value: "ECONOMICS", label: "Economics" },
+    { value: "HEALTH", label: "Health" },
+    { value: "SPORTS", label: "Sports" },
+    { value: "OTHERS", label: "Others" },
+  ]);
 
   const paginationFilter: QuizPaginationFilter = useMemo(
     () => ({
@@ -59,10 +95,11 @@ function SettingQuiz() {
     [queryParams]
   );
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, refetch } = useQuery({
     queryKey: ["quizzes"],
     queryFn: () => fetchQuizzes(paginationFilter),
     staleTime: DEFAULT_SLATE_TIME,
+    retry: false,
     enabled: false,
   });
 
@@ -158,11 +195,12 @@ function SettingQuiz() {
       showCancelButton: true,
       icon: "question",
       confirmButtonText: "Next step",
+      confirmButtonColor: "#27b489",
       cancelButtonColor: "#ef4444",
     }).then((result) => {
       if (result.isConfirmed) {
         if (result.value === "manually") {
-          navigate(routers.home);
+          setQuizModalOpen(true);
         } else if (result.value === "import") {
           Swal.fire({
             title: "Select file",
@@ -173,6 +211,11 @@ function SettingQuiz() {
             },
             cancelButtonColor: "#ef4444",
             showCancelButton: true,
+            confirmButtonColor: "#27b489",
+            preConfirm(inputValue) {
+              if (!inputValue)
+                Swal.showValidationMessage("Please select a file to continue");
+            },
             icon: "info",
           }).then(async (value) => {
             const file = value.value;
@@ -280,8 +323,124 @@ function SettingQuiz() {
     });
   }
 
+  const handleSubmit = async (values: QuizRequest) => {
+    // Handle submit form logic here (e.g., call API or update state)
+    try {
+      const examId = await createQuiz(values);
+      navigate(routers.settingQuizDetails.replace(":id", examId.id.toString()));
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const [quizModalOpen, setQuizModalOpen] = useState(false);
   return (
     <>
+      <Modal
+        isOpen={quizModalOpen}
+        onClose={() => {
+          setQuizModalOpen(false);
+        }}
+        children={
+          <>
+            <Formik
+              initialValues={{
+                title: "",
+                category: categories[0].value,
+                duration: 60,
+                expiratedAt: "",
+              }}
+              validationSchema={quizSchema}
+              onSubmit={handleSubmit}
+            >
+              {({ setFieldValue }) => (
+                <Form>
+                  <div className="mb-4">
+                    <label htmlFor="title" className="block font-semibold mb-1">
+                      Title
+                    </label>
+                    <FastField
+                      name="title"
+                      placeholder="Enter quiz title"
+                      component={InputField}
+                    />
+                  </div>
+
+                  <div className="mb-4">
+                    <label
+                      htmlFor="category"
+                      className="block font-semibold mb-1"
+                    >
+                      Category
+                    </label>
+                    <Select
+                      name="category"
+                      options={categories}
+                      styles={{
+                        control: (baseStyles) => ({
+                          ...baseStyles,
+                          borderWidth: "2px",
+                          borderRadius: "8px",
+                          borderColor: "#e5e7eb",
+                          boxShadow: "none",
+                          paddingTop: "6px",
+                          cursor: "pointer",
+                          paddingBottom: "6px",
+                          "&:hover": {},
+                          "&:focus-within": {
+                            borderColor: "#27b489",
+                          },
+                        }),
+                      }}
+                      onChange={(selectedOption) =>
+                        setFieldValue("category", selectedOption?.value)
+                      }
+                      defaultValue={categories[0]}
+                    />
+                  </div>
+
+                  <div className="mb-4">
+                    <label
+                      htmlFor="duration"
+                      className="block font-semibold mb-1"
+                    >
+                      Duration (minutes)
+                    </label>
+                    <FastField
+                      name="duration"
+                      type="number"
+                      placeholder="Enter duration"
+                      component={InputField}
+                    />
+                  </div>
+
+                  <div className="mb-4">
+                    <label
+                      htmlFor="expiratedAt"
+                      className="block font-semibold mb-1"
+                    >
+                      Expiration Date
+                    </label>
+                    <FastField
+                      name="expiratedAt"
+                      type="datetime-local"
+                      component={InputField}
+                    />
+                  </div>
+                  <div className="flex justify-center">
+                    <button
+                      type="submit"
+                      className="w-full max-w-32 btn-custom mt-4 bg-primary text-white rounded-lg"
+                    >
+                      Create Quiz
+                    </button>
+                  </div>
+                </Form>
+              )}
+            </Formik>
+          </>
+        }
+      ></Modal>
       <div>
         <button
           onClick={handleCreateQuiz}
@@ -315,7 +474,10 @@ function SettingQuiz() {
             </thead>
             <tbody>
               {data.data.map((quiz) => (
-                <tr key={quiz.id} className="even:bg-slate-100 *:py-4 *:*:line-clamp-1">
+                <tr
+                  key={quiz.id}
+                  className="even:bg-slate-100 *:py-4 *:*:line-clamp-1"
+                >
                   <td className="first:pl-4 last:pr-4">
                     <span>{quiz.id}</span>
                   </td>

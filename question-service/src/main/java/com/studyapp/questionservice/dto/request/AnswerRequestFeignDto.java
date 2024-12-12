@@ -20,5 +20,5 @@ public class AnswerRequestFeignDto {
     @NotNull(message = "The correctness status cannot be null")
     Boolean isCorrect;
 
-    List<Long> filesIndex;
+    List<String> filesIndex;
 }
