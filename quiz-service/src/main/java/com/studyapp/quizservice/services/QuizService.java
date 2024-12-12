@@ -1,11 +1,13 @@
 package com.studyapp.quizservice.services;
 
 import com.studyapp.quizservice.client.question.QuestionClient;
+import com.studyapp.quizservice.client.question.dto.response.QuestionChangeResponseDto;
 import com.studyapp.quizservice.client.question.dto.response.QuestionResponseDto;
 import com.studyapp.quizservice.client.user.UserClient;
 import com.studyapp.quizservice.dao.QuizDao;
 import com.studyapp.quizservice.dto.request.QuizRequestDto;
 import com.studyapp.quizservice.dto.response.CategoryDto;
+import com.studyapp.quizservice.dto.response.QuizChangeResponseDto;
 import com.studyapp.quizservice.dto.response.QuizResponseDto;
 import com.studyapp.quizservice.entities.QuizEntity;
 import com.studyapp.quizservice.enums.Category;
@@ -50,6 +52,19 @@ public class QuizService {
         QuizResponseDto quizResponseDto = quizMapper.entityToRpDto(quizDao.findById(id).orElseThrow(() -> new QuizException(QuizError.EXAM_NOT_FOUND)));
 
         List<QuestionResponseDto> allQuestions = questionClient.getQuestionsByQuery(Collections.singletonList(id)).getBody();
+        if (allQuestions == null) {
+            allQuestions = Collections.emptyList();
+        }
+
+        quizResponseDto.setListQuestion(allQuestions);
+
+        return quizResponseDto;
+    }
+
+    public QuizChangeResponseDto getExamManageById(Long id) {
+        QuizChangeResponseDto quizResponseDto = quizMapper.entityToChangeRpDto(quizDao.findById(id).orElseThrow(() -> new QuizException(QuizError.EXAM_NOT_FOUND)));
+
+        List<QuestionChangeResponseDto> allQuestions = questionClient.getQuestionsManageByQuery(Collections.singletonList(id)).getBody();
         if (allQuestions == null) {
             allQuestions = Collections.emptyList();
         }
@@ -114,6 +129,112 @@ public class QuizService {
         }
 
         return quizDao.findAll(spec, pageable).map(quizMapper::entityToRpDto);
+    }
+
+    public List<QuizResponseDto> getQuizzesByQueryNoPagination(String title, List<String> categoryList, String createdBy,
+                                                               Integer minDuration, Integer maxDuration,
+                                                               LocalDateTime expiratedAtAfter, LocalDateTime expiratedAtBefore) {
+        Specification<QuizEntity> spec = Specification.where(null);
+
+        if (title != null && !title.isEmpty()) {
+            spec = spec.and(QuizSpecification.hasTitle(title));
+        }
+
+        if (categoryList != null && !categoryList.isEmpty()) {
+            List<Category> categories = categoryList.stream()
+                    .map(String::toUpperCase)
+                    .map(catStr -> {
+                        try {
+                            return Category.valueOf(catStr);
+                        } catch (IllegalArgumentException e) {
+                            // Log hoặc xử lý các category không hợp lệ (trong trường hợp này bỏ qua)
+                            return null;
+                        }
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+
+            if (!categories.isEmpty()) {
+                spec = spec.and(QuizSpecification.hasAnyCategory(categories));
+            }
+        }
+
+        if (createdBy != null && !createdBy.isEmpty()) {
+            spec = spec.and(QuizSpecification.createdBy(createdBy));
+        }
+
+        if (minDuration != null) {
+            spec = spec.and(QuizSpecification.hasDurationGreaterThanOrEqual(minDuration));
+        }
+
+        if (maxDuration != null) {
+            spec = spec.and(QuizSpecification.hasDurationLessThanOrEqual(maxDuration));
+        }
+
+        if (expiratedAtAfter != null) {
+            spec = spec.and(QuizSpecification.expiratedAtAfter(expiratedAtAfter));
+        }
+
+        if (expiratedAtBefore != null) {
+            spec = spec.and(QuizSpecification.expiratedAtBefore(expiratedAtBefore));
+        }
+
+        return quizDao.findAll(spec).stream()
+                .map(quizMapper::entityToRpDto)
+                .collect(Collectors.toList());
+    }
+
+
+    public Page<QuizChangeResponseDto> getQuizzesManageByQuery(String title, List<String> categoryList, String createdBy,
+                                                   Integer minDuration, Integer maxDuration,
+                                                   LocalDateTime expiratedAtAfter, LocalDateTime expiratedAtBefore,
+                                                   Pageable pageable) {
+        Specification<QuizEntity> spec = Specification.where(null);
+
+        if (title != null && !title.isEmpty()) {
+            spec = spec.and(QuizSpecification.hasTitle(title));
+        }
+
+        if (categoryList != null && !categoryList.isEmpty()) {
+            List<Category> categories = categoryList.stream()
+                    .map(String::toUpperCase)
+                    .map(catStr -> {
+                        try {
+                            return Category.valueOf(catStr);
+                        } catch (IllegalArgumentException e) {
+                            // Log or handle invalid categories (in this case, ignoring invalid categories)
+                            return null;
+                        }
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+
+            if (!categories.isEmpty()) {
+                spec = spec.and(QuizSpecification.hasAnyCategory(categories));
+            }
+        }
+
+        if (createdBy != null && !createdBy.isEmpty()) {
+            spec = spec.and(QuizSpecification.createdBy(createdBy));
+        }
+
+        if (minDuration != null) {
+            spec = spec.and(QuizSpecification.hasDurationGreaterThanOrEqual(minDuration));
+        }
+
+        if (maxDuration != null) {
+            spec = spec.and(QuizSpecification.hasDurationLessThanOrEqual(maxDuration));
+        }
+
+        if (expiratedAtAfter != null) {
+            spec = spec.and(QuizSpecification.expiratedAtAfter(expiratedAtAfter));
+        }
+
+        if (expiratedAtBefore != null) {
+            spec = spec.and(QuizSpecification.expiratedAtBefore(expiratedAtBefore));
+        }
+
+        return quizDao.findAll(spec, pageable).map(quizMapper::entityToChangeRpDto);
     }
 
 }

@@ -12,11 +12,10 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class QuestionResponseDto {
+public class QuestionChangeResponseDto {
     Long id;
     String content;
-    List<AnswerResponseDto> listAnswer;
-    Long examId;
     List<Media> files;
+    List<AnswerChangeResponseDto> listAnswer;
     LocalDateTime updatedAt;
 }

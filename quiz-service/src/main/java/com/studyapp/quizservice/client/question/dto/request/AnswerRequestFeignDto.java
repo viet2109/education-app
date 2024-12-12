@@ -14,5 +14,5 @@ public class AnswerRequestFeignDto {
     String content;
 
     Boolean isCorrect;
-    List<Long> filesIndex;
+    List<String> filesIndex;
 }

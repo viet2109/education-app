@@ -6,25 +6,16 @@ import React, {
   useRef,
 } from "react";
 import Modal from "./modal";
-import { Media } from "../types";
+import { AnswerResponseDto, Media, QuestionResponseDto } from "../types";
+import { FaEye } from "react-icons/fa6";
+import { SwiperEvents } from "swiper/types";
+import Zoom from "react-medium-image-zoom";
 
 interface QuestionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (question: Question) => void;
-  initialQuestion?: Question;
-}
-
-export interface Answer {
-  content: string;
-  files: (File | Media)[];
-  isCorrect: boolean;
-}
-
-export interface Question {
-  content: string;
-  listAnswer: Answer[];
-  files: (File | Media)[];
+  onSubmit: (question: QuestionResponseDto) => void;
+  initialQuestion?: QuestionResponseDto;
 }
 
 const QuestionModal: React.FC<QuestionModalProps> = ({
@@ -34,7 +25,7 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
   initialQuestion,
 }) => {
   const [questionText, setQuestionText] = useState<string>("");
-  const [answers, setAnswers] = useState<Answer[]>([]);
+  const [answers, setAnswers] = useState<AnswerResponseDto[]>([]);
   const [questionFiles, setQuestionFiles] = useState<(File | Media)[]>([]);
   const [isVisible, setIsVisible] = useState(isOpen);
   const formRef = useRef<HTMLDivElement>(null);
@@ -47,7 +38,10 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
         setQuestionFiles(initialQuestion.files);
       } else {
         setQuestionText("");
-        setAnswers([{ content: "", files: [], isCorrect: false }]);
+        setAnswers([
+          { content: "", files: [], isCorrect: false },
+          { content: "", files: [], isCorrect: false },
+        ]);
         setQuestionFiles([]);
       }
       setIsVisible(true);
@@ -64,7 +58,7 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
 
   const handleAnswerChange = (
     index: number,
-    field: keyof Answer,
+    field: keyof AnswerResponseDto,
     value: string | boolean | (File | Media)[]
   ) => {
     const newAnswers = [...answers];
@@ -113,10 +107,12 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
 
   const handleFormSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const question: Question = {
+    const question: QuestionResponseDto = {
       content: questionText,
       listAnswer: answers,
       files: questionFiles,
+      examId: 0,
+      updatedAt: new Date().toDateString(),
     };
     onSubmit(question);
     setQuestionText("");
@@ -144,7 +140,7 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
         <form onSubmit={handleFormSubmit}>
           <div className="mb-4">
             <label
-              className="block text-gray-600 font-medium mb-2"
+              className="block text-gray-600 font-semibold mb-2"
               htmlFor="question"
             >
               Question
@@ -152,6 +148,7 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
             <div className="w-full flex mb-3">
               <textarea
                 id="question"
+                required
                 className="w-full p-3 m-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
                 placeholder="Enter your question here"
                 value={questionText}
@@ -172,20 +169,29 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
               Upload Question Files
             </label>
             {questionFiles.length > 0 && (
-              <ul className="mt-2">
+              <ul className="flex flex-col ml-2 gap-2 mt-4">
                 {questionFiles.map((file, index) => (
                   <li
                     key={index}
-                    className="flex justify-between text-gray-600"
+                    className="flex items-center gap-8 text-gray-600"
                   >
                     {renderFileName(file)}
-                    <button
-                      type="button"
-                      onClick={() => removeQuestionFile(index)}
-                      className="text-red-500 hover:text-red-600 ml-2"
-                    >
-                      ✕
-                    </button>
+                    <div className="flex items-center gap-4">
+                      <a
+                        rel="noopener"
+                        href={(file as Media).fileUrl}
+                        target="_blank"
+                      >
+                        <FaEye className="hover:!text-primary cursor-pointer transition-all duration-300" />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => removeQuestionFile(index)}
+                        className="text-red-500 hover:text-red-600"
+                      >
+                        ✕
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -193,7 +199,7 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
           </div>
 
           <div className="mb-4">
-            <label className="block text-gray-600 font-medium mb-2">
+            <label className="block text-gray-600 mb-2 font-semibold">
               Answers
             </label>
             <div
@@ -207,6 +213,7 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
                 >
                   <div className="flex w-full gap-1">
                     <textarea
+                      required
                       placeholder={`Answer ${index + 1}`}
                       className="w-full flex-1 p-3 border rounded-lg outline-none focus:ring-2 focus:ring-blue-400"
                       value={answer.content}
@@ -218,6 +225,7 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
                       <input
                         type="checkbox"
                         checked={answer.isCorrect}
+                        id={index.toString()}
                         onChange={(e) =>
                           handleAnswerChange(
                             index,
@@ -225,9 +233,14 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
                             e.target.checked
                           )
                         }
-                        className="mr-2"
+                        className="mr-2 cursor-pointer"
                       />
-                      <span className="text-gray-600">Correct</span>
+                      <label
+                        htmlFor={index.toString()}
+                        className="text-gray-600 cursor-pointer"
+                      >
+                        Correct
+                      </label>
                     </div>
                     <button
                       type="button"
@@ -251,20 +264,29 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
                     Upload Files
                   </label>
                   {answer.files.length > 0 && (
-                    <ul className="mt-2">
+                    <ul className="flex flex-col gap-2">
                       {answer.files.map((file, fileIndex) => (
                         <li
                           key={fileIndex}
-                          className="flex justify-between text-gray-600"
+                          className="flex justify-between gap-8 text-gray-600"
                         >
                           {renderFileName(file)}
-                          <button
-                            type="button"
-                            onClick={() => removeAnswerFile(index, fileIndex)}
-                            className="text-red-500 hover:text-red-600 ml-2"
-                          >
-                            ✕
-                          </button>
+                          <div className="flex items-center gap-4">
+                            <a
+                              href={(file as Media).fileUrl}
+                              target="_blank"
+                              rel="noopener"
+                            >
+                              <FaEye className="hover:!text-primary cursor-pointer transition-all duration-300" />
+                            </a>
+                            <button
+                              type="button"
+                              onClick={() => removeAnswerFile(index, fileIndex)}
+                              className="text-red-500 hover:text-red-600"
+                            >
+                              ✕
+                            </button>
+                          </div>
                         </li>
                       ))}
                     </ul>
@@ -293,7 +315,7 @@ const QuestionModal: React.FC<QuestionModalProps> = ({
               type="submit"
               className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition"
             >
-              Submit
+              {initialQuestion ? "Update" : "Submit"}
             </button>
           </div>
         </form>

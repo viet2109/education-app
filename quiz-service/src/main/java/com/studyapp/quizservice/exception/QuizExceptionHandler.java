@@ -47,6 +47,11 @@ public class QuizExceptionHandler {
         return ResponseEntity.badRequest().body(errors);
     }
 
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, String>> handleAllExceptions(Exception exception) {
+        HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR; // Mã lỗi 500
+        return new ResponseEntity<>(buildResponse(exception, status), status);
+    }
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
 

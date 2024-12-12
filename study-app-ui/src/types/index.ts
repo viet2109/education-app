@@ -45,12 +45,20 @@ export interface Quiz {
   updatedAt: string;
 }
 
+export interface QuizRequest {
+  title: string; // Tiêu đề của quiz
+  category: string; // Danh mục của quiz, sử dụng kiểu dữ liệu Category đã được định nghĩa
+  duration?: number; // Thời gian của quiz (tính bằng giây)
+  expiratedAt?: string; // Thời điểm hết hạn của quiz
+}
+
 export interface QuestionResponseDto {
   id?: number; // ID của câu hỏi
   content: string; // Nội dung câu hỏi
   listAnswer: AnswerResponseDto[]; // Danh sách các câu trả lời, sử dụng kiểu dữ liệu AnswerResponseDto
   examId: number; // ID của bài thi (hoặc quiz) mà câu hỏi thuộc về
   files: (File | Media)[]; // Danh sách URL của các file liên quan đến câu hỏi
+  updatedAt: string;
 }
 
 export interface AnswerResponseDto {
@@ -78,6 +86,12 @@ interface BasePaginationFilter {
   sort?: string[]; // Mảng các trường và thứ tự sắp xếp (mặc định là ["id,asc"])
 }
 
+export interface QuestionBankPaginationFilter extends BasePaginationFilter {
+  category?: string[]; // Tìm theo danh mục (có thể bỏ qua)
+  createdBy?: string; // Tìm theo người tạo (có thể bỏ qua)
+  excludeExamIds?: number[]; // Tìm theo người tạo (có thể bỏ qua)
+}
+
 export interface QuizPaginationFilter extends BasePaginationFilter {
   title?: string; // Tìm theo tiêu đề (có thể bỏ qua)
   category?: string[]; // Tìm theo danh mục (có thể bỏ qua)
@@ -87,7 +101,6 @@ export interface QuizPaginationFilter extends BasePaginationFilter {
   expiratedAtAfter?: string; // Tìm theo thời gian hết hạn sau (có thể bỏ qua)
   expiratedAtBefore?: string; // Tìm theo thời gian hết hạn trước (có thể bỏ qua)
 }
-
 export interface Media {
   id: number; // Sử dụng number cho kiểu Long
   filename: string;

@@ -17,6 +17,7 @@ public class QuizResponseDto {
     String title;
     String category;
     Integer duration;
+    LocalDateTime updatedAt;
     LocalDateTime expiratedAt;
     List<QuestionResponseDto> listQuestion;
 }

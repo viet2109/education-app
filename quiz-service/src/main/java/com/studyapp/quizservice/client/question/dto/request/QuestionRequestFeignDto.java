@@ -14,5 +14,5 @@ public class QuestionRequestFeignDto {
     String content;
     List<AnswerRequestFeignDto> listAnswer;
     Long examId;
-    List<Long> filesIndex;
+    List<String> filesIndex;
 }

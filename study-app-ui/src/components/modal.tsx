@@ -28,7 +28,9 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children }) => {
         }`}
       >
         <button
-          onClick={onClose}
+          onClick={() => {
+            onClose();
+          }}
           className="absolute  rounded-lg top-3 text-2xl right-4 text-gray-400 hover:text-red-500"
         >
           ✕

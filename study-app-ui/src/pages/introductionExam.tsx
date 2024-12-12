@@ -5,6 +5,7 @@ import { images } from "../assets/images";
 import routers from "../configs/routers.ts";
 import { fetchQuiz } from "../api/quiz.ts";
 import { Quiz } from "../types/index.ts";
+import { useQuery } from "@tanstack/react-query";
 
 interface IntroductionExamProps {}
 
@@ -12,40 +13,55 @@ const IntroductionExam: FC<IntroductionExamProps> = () => {
   const { id } = useParams();
 
   const [quiz, setQuiz] = useState<Quiz>();
-  const getQuiz = useCallback(async () => {
-    try {
-      const data: Quiz = await fetchQuiz(Number(id));
-      setQuiz(data);
-    } catch (err) {
-      console.error(err);
-    }
-  }, []);
+  const { data, isLoading, refetch } = useQuery<Quiz>({
+    queryKey: ["quizz", id],
+    queryFn: () => fetchQuiz(Number(id)),
+  });
 
   useEffect(() => {
-    getQuiz().then();
-  }, [getQuiz]);
+    setQuiz(data);
+  }, [data]);
+
+  useEffect(() => {
+    refetch();
+  }, [id]);
   return (
     <div className="py-10 grid place-items-center">
-      <h1 className="mb-10 font-[500] capitalize text-xl max-w-96 text-center">
-        {quiz?.title}
-      </h1>
+      {isLoading ? (
+        <div className="mb-10 w-96 max-w-96 h-8 bg-gray-300 rounded-md animate-pulse"></div>
+      ) : (
+        <h1 className="mb-10 font-[500] capitalize text-xl max-w-96 text-center">
+          {quiz?.title}
+        </h1>
+      )}
+
       <div className="flex flex-col lg:flex-row">
         <div>
           <div className="flex justify-between mb-10">
             <div className="flex justify-center items-center gap-4 text-primary">
               <FaRegQuestionCircle size={24} className="text-gray-400" />
-              <span>QUESTIONS: {quiz?.listQuestion.length}</span>
+              {isLoading ? (
+                <span className="inline-block w-32 h-6 bg-gray-300 rounded-md animate-pulse"></span>
+              ) : (
+                <span>QUESTIONS: {quiz?.listQuestion.length}</span>
+              )}
             </div>
             <div className="flex justify-center items-center gap-4 text-primary">
               <FaRegClock size={24} className="text-gray-400" />
-              <span>TIME: {quiz?.duration && quiz?.duration / 60} Mins</span>
+
+              {isLoading ? (
+                <span className="inline-block w-32 h-6 bg-gray-300 rounded-md animate-pulse"></span>
+              ) : (
+                <span>TIME: {quiz?.duration && quiz?.duration / 60} Mins</span>
+              )}
             </div>
           </div>
           <div>
             <h2 className="font-[500] text-xl text-left">Before you Start</h2>
             <ul className="pl-10 flex flex-col gap-8 mt-8">
               <li className="list-disc marker:text-primary text-left">
-                You are about to practice official questions set of subject {quiz?.category.toLocaleLowerCase()}.
+                You are about to practice official questions set of subject{" "}
+                {quiz?.category.toLocaleLowerCase()}.
               </li>
               <li className="list-disc marker:text-primary text-left">
                 At the end of your exam practice, you can tap on review to view
@@ -71,13 +87,20 @@ const IntroductionExam: FC<IntroductionExamProps> = () => {
           />
         </div>
       </div>
-      <NavLink
-        to={routers.exam}
-        state={quiz}
-        className="btn-custom block w-fit mt-10 !py-4 !px-10"
-      >
-        Start Exam
-      </NavLink>
+
+      {isLoading ? (
+        <div className="block w-fit mt-10 py-4 px-10 bg-gray-300 rounded-lg animate-pulse">
+          <div className="h-6 w-20 bg-gray-400 rounded"></div>
+        </div>
+      ) : (
+        <NavLink
+          to={routers.exam}
+          state={quiz}
+          className="btn-custom block w-fit mt-10 !py-4 !px-10"
+        >
+          Start Exam
+        </NavLink>
+      )}
     </div>
   );
 };

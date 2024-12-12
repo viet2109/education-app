@@ -1,11 +1,13 @@
 package com.studyapp.quizservice.services;
 
+import com.studyapp.quizservice.dto.response.QuizChangeResponseDto;
 import com.studyapp.quizservice.dto.response.QuizResponseDto;
-import com.studyapp.quizservice.services.QuestionExportStrategy.ExcelQuizExportStrategy;
-import com.studyapp.quizservice.services.QuestionExportStrategy.QuizExportStrategy;
-import com.studyapp.quizservice.services.QuestionExportStrategy.WordQuizExportStrategy;
+import com.studyapp.quizservice.services.QuizExportStrategy.ExcelQuizExportStrategy;
+import com.studyapp.quizservice.services.QuizExportStrategy.QuizExportStrategy;
+import com.studyapp.quizservice.services.QuizExportStrategy.WordQuizExportStrategy;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -21,7 +23,7 @@ public class QuizExportService {
         strategies.put("word", new WordQuizExportStrategy());
     }
 
-    public byte[] exportQuiz(QuizResponseDto quizResponseDto, String fileType) {
+    public byte[] exportQuiz(QuizChangeResponseDto quizResponseDto, String fileType) throws IOException {
         if (fileType == null || !strategies.containsKey(fileType)) {
             throw new IllegalArgumentException("Unsupported file type: " + fileType);
         }

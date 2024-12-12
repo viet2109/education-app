@@ -15,6 +15,9 @@ import Select, { MultiValue } from "react-select";
 import { formatLocalDate } from "../helper/formatLocalDate";
 import routers from "../configs/routers";
 import Pagianate from "../components/paginate";
+import { useQuery } from "@tanstack/react-query";
+import { DEFAULT_SLATE_TIME } from "../constant";
+import QuizItemSkeleton from "../components/quizItemSkeleton";
 
 const categoriesOptions = [
   { value: "MATHEMATICS", label: "Mathematics" },
@@ -99,26 +102,26 @@ const Exams: React.FC = () => {
     [queryParams]
   );
 
-  const getAllQuiz = useCallback(async () => {
-    try {
-      const data: PaginatedResponse<Quiz> = await fetchQuizzes(
-        paginationFilter
-      );
-      setQuizzes(data.data);
-      setTotalItems(data.pagination.totalItems);
-    } catch (err) {
-      console.error(err);
-    }
-  }, [paginationFilter]);
+  const { data, isLoading, refetch } = useQuery<PaginatedResponse<Quiz>>({
+    queryKey: ["quizzes", paginationFilter],
+    queryFn: () => fetchQuizzes(paginationFilter),
+  });
 
   useEffect(() => {
-    getAllQuiz();
+    if (data) {
+      setQuizzes(data.data);
+      setTotalItems(data.pagination.totalItems);
+    }
+  }, [data]);
+
+  useEffect(() => {
+    refetch();
     window.scrollTo({
       top: 0,
       left: 0,
       behavior: "smooth",
     });
-  }, [getAllQuiz]);
+  }, [refetch, paginationFilter]);
 
   const handleCloseTippy = (ref: React.RefObject<HTMLButtonElement>) => {
     setTimeout(() => {
@@ -134,7 +137,7 @@ const Exams: React.FC = () => {
     handleCloseTippy(filterBtn);
 
     if (selectedOptions && selectedOptions.length > 0) {
-      params.delete("category")
+      params.delete("category");
       selectedOptions.forEach((opt) => {
         params.append(
           "category",
@@ -341,7 +344,13 @@ const Exams: React.FC = () => {
           </button>
         </Tippy>
       </div>
-      {quizzes.length === 0 ? (
+      {isLoading ? (
+        <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 *:shadow-custom *:p-6 *:rounded-lg my-4 mt-8">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <QuizItemSkeleton key={index} />
+          ))}
+        </ul>
+      ) : quizzes.length === 0 ? (
         <NoDataModal title="No exams found" />
       ) : (
         <>

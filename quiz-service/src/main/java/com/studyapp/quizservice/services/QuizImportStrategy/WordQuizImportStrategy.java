@@ -1,16 +1,19 @@
 package com.studyapp.quizservice.services.QuizImportStrategy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.studyapp.quizservice.client.file.FileClient;
 import com.studyapp.quizservice.client.question.QuestionClient;
 import com.studyapp.quizservice.client.question.dto.request.AnswerRequestFeignDto;
 import com.studyapp.quizservice.client.question.dto.request.QuestionRequestFeignDto;
 import com.studyapp.quizservice.dto.request.QuizRequestDto;
 import com.studyapp.quizservice.dto.response.QuizResponseDto;
+import com.studyapp.quizservice.enums.Category;
 import com.studyapp.quizservice.services.QuizService;
 import com.studyapp.quizservice.utils.CustomMultipartFile;
 import lombok.RequiredArgsConstructor;
-import org.apache.poi.xwpf.usermodel.*;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.poi.xwpf.usermodel.XWPFPicture;
+import org.apache.poi.xwpf.usermodel.XWPFPictureData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -18,40 +21,41 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class WordQuizImportStrategy implements QuizImportStrategy {
     private static final Logger log = LoggerFactory.getLogger(WordQuizImportStrategy.class);
-    private final FileClient fileClient;
     private final QuizService quizService;
     private final QuestionClient questionClient;
 
     @Override
     public QuizResponseDto convertFileToDto(MultipartFile multipartFile, String userId) {
-        String keyQuizStart = "QZ:";
-        String keyQuestionStart = "QT:";
-        String keyAnswerStart = "A:";
+        String keyQuizStart = "Quiz:";
+        String keyQuizCategoryStart = "Category:";
+        String keyImageStart = "Images:";
+        String keyQuestionStart = "Question:";
+        String keyAnswerStart = "Answer:";
         String keyCorrectAnswer = "|";
         String questionMedia = "q";
         String answerMedia = "a";
+        String imageSplit = "-";
 
         try (XWPFDocument document = new XWPFDocument(multipartFile.getInputStream())) {
-            Long examId = null;
             List<XWPFParagraph> paragraphs = document.getParagraphs();
+            QuizRequestDto quizRequestDto = QuizRequestDto.builder().createdBy(userId).build();
             List<QuestionRequestFeignDto> questionRequestDtos = new ArrayList<>();
-
+            List<XWPFPictureData> allPictures = getAllPictures(document);
             List<MultipartFile> questionFiles = new ArrayList<>();
+            List<String> questionFilesKey = new ArrayList<>();
+            List<String> answerFilesKey = new ArrayList<>();
             List<MultipartFile> answerFiles = new ArrayList<>();
-            int questionFileIndex = 0;
-            int answerFileIndex = 0;
+            int fileIndex = 0;
 
-            paragraph:
             for (XWPFParagraph paragraph : paragraphs) {
-                if (paragraph.getText().trim().isEmpty()) continue;
-                StringBuilder text = new StringBuilder();
+                String paragraphText = paragraph.getText().trim();
+                if (paragraphText.isEmpty()) continue;
                 String typeMediaList = "";
                 int indexAnswer = -1;
                 QuestionRequestFeignDto questionRequestDto = QuestionRequestFeignDto
@@ -59,32 +63,53 @@ public class WordQuizImportStrategy implements QuizImportStrategy {
                         .filesIndex(new ArrayList<>())
                         .listAnswer(new ArrayList<>())
                         .build();
-                for (XWPFRun run : paragraph.getRuns()) {
-                    String subText = run.getText(0);
-                    if (subText != null) {
-                        text.append(subText);
+
+                for (String lineText : paragraphText.split("\n")) {
+                    //Image
+                    if (lineText.trim().startsWith(keyImageStart)) {
+                        for (int i = 0; i < lineText.trim().split(imageSplit, -1).length; i++) {
+                            MultipartFile file = new CustomMultipartFile(
+                                    allPictures.get(fileIndex).getFileName(),
+                                    allPictures.get(fileIndex).getFileName(),
+                                    "image/" + getFileExtension(allPictures.get(fileIndex)),
+                                    allPictures.get(fileIndex).getData()
+                            );
+                            if (typeMediaList.equals(questionMedia)) {
+                                if (fileIndex < allPictures.size()) {
+                                    questionFiles.add(file);
+                                    questionFilesKey.add(String.valueOf(fileIndex));
+                                    questionRequestDto.getFilesIndex().add(String.valueOf(fileIndex++));
+                                }
+                            } else if (typeMediaList.equals(answerMedia)) {
+                                if (fileIndex < allPictures.size()) {
+                                    answerFiles.add(file);
+                                    answerFilesKey.add(String.valueOf(fileIndex));
+                                    questionRequestDto.getListAnswer().get(indexAnswer).getFilesIndex().add(String.valueOf(fileIndex++));
+                                }
+                            }
+                        }
                     }
-                    //start new line
+                    // text line
                     else {
-                        if (text.toString().startsWith(keyQuizStart) && examId == null) {
-                            String title = text.substring(keyQuizStart.length()).trim();
-                            QuizRequestDto quizRequestDto = QuizRequestDto
-                                    .builder()
-                                    .title(title)
-                                    .createdBy(userId)
-                                    .build();
-                            examId = quizService.createExam(quizRequestDto).getId();
-                            continue paragraph;
-                        } else if (text.toString().startsWith(keyQuestionStart)) {
-                            String content = text.substring(keyQuestionStart.length()).trim();
+                        if (lineText.startsWith(keyQuizStart)) {
+                            String title = lineText.substring(keyQuizStart.length()).trim();
+                            quizRequestDto.setTitle(title);
+                        } else if (lineText.startsWith(keyQuizCategoryStart)) {
+                            String categoryName = lineText.substring(keyQuizCategoryStart.length()).trim();
+                            try {
+                                Category category = Category.valueOf(categoryName.toUpperCase());
+                                quizRequestDto.setCategory(category);
+
+                            } catch (IllegalArgumentException exception) {
+                                log.error("Category type has no constant with the specified name: {}", categoryName);
+                            }
+                        } else if (lineText.startsWith(keyQuestionStart)) {
+                            String content = lineText.substring(keyQuestionStart.length()).trim();
                             questionRequestDto.setContent(content);
                             typeMediaList = questionMedia;
-                            if (examId != null) {
-                                questionRequestDto.setExamId(examId);
-                            }
-                        } else if (text.toString().startsWith(keyAnswerStart)) {
-                            String content = text.substring(keyAnswerStart.length(), text.lastIndexOf(keyCorrectAnswer)).trim();
-                            boolean isCorrect = Boolean.parseBoolean(text.substring(text.lastIndexOf(keyCorrectAnswer) + 1).trim());
+                        } else if (lineText.startsWith(keyAnswerStart)) {
+                            String content = lineText.substring(keyAnswerStart.length(), lineText.lastIndexOf(keyCorrectAnswer)).trim();
+                            boolean isCorrect = Boolean.parseBoolean(lineText.substring(lineText.lastIndexOf(keyCorrectAnswer) + 1).trim());
                             typeMediaList = answerMedia;
                             indexAnswer++;
                             AnswerRequestFeignDto answerRequestDto = AnswerRequestFeignDto
@@ -95,32 +120,19 @@ public class WordQuizImportStrategy implements QuizImportStrategy {
                                     .build();
                             questionRequestDto.getListAnswer().add(answerRequestDto);
                         }
-                        text.setLength(0);
-                    }
-
-                    for (XWPFPicture picture : run.getEmbeddedPictures()) {
-                        XWPFPictureData pictureData = picture.getPictureData();
-                        MultipartFile file = new CustomMultipartFile(
-                                pictureData.getFileName(),
-                                pictureData.getFileName(),
-                                "image/" + getFileExtension(pictureData),
-                                pictureData.getData()
-                        );
-                        if (typeMediaList.equals(questionMedia)) {
-                            questionFiles.add(file);
-                            questionRequestDto.getFilesIndex().add((long) questionFileIndex++);
-                        } else if (typeMediaList.equals(answerMedia)) {
-                            answerFiles.add(file);
-                            questionRequestDto.getListAnswer().get(indexAnswer).getFilesIndex().add((long) answerFileIndex++);
-                        }
-                        fileClient.uploadFiles(Collections.singletonList(file));
                     }
                 }
-                questionRequestDtos.add(questionRequestDto);
+                if (questionRequestDto.getContent() != null && !questionRequestDto.getContent().trim().isEmpty())
+                    questionRequestDtos.add(questionRequestDto);
             }
+
+            long examId = quizService.createExam(quizRequestDto).getId();
+            questionRequestDtos.forEach(questionRequestFeignDto -> questionRequestFeignDto.setExamId(examId));
+
             ObjectMapper objectMapper = new ObjectMapper();
             String questionRequestFeignDtoListJson = objectMapper.writeValueAsString(questionRequestDtos);
-            questionClient.createListQuestionByFeign(questionRequestFeignDtoListJson, questionFiles, answerFiles);
+            questionClient.createListQuestionByFeign(questionRequestFeignDtoListJson, questionFilesKey.isEmpty() ? null : questionFilesKey, questionFiles.isEmpty() ? null : questionFiles, answerFilesKey.isEmpty() ? null : answerFilesKey, answerFiles.isEmpty() ? null : answerFiles);
+
             return quizService.getExamById(examId);
 
         } catch (IOException exception) {
@@ -129,10 +141,20 @@ public class WordQuizImportStrategy implements QuizImportStrategy {
         return null;
     }
 
+
+    private List<XWPFPictureData> getAllPictures(XWPFDocument document) {
+        return document.getParagraphs().stream()
+                .flatMap(paragraph -> paragraph.getRuns().stream())
+                .flatMap(run -> run.getEmbeddedPictures().stream())
+                .map(XWPFPicture::getPictureData)
+                .toList();
+    }
+
+
     private String getFileExtension(XWPFPictureData xwpfPictureData) {
         if (xwpfPictureData.suggestFileExtension() != null) return xwpfPictureData.suggestFileExtension();
         return xwpfPictureData.getFileName().substring(xwpfPictureData.getFileName().lastIndexOf('.') + 1);
     }
 
-
 }
+

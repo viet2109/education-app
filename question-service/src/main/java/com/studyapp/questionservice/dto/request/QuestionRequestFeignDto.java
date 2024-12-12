@@ -25,5 +25,5 @@ public class QuestionRequestFeignDto {
     @NotNull(message = "The examId is mandatory")
     Long examId;
 
-    List<Long> filesIndex;
+    List<String> filesIndex;
 }

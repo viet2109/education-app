@@ -4,7 +4,6 @@ import com.studyapp.quizservice.client.file.dto.Media;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Builder
@@ -12,11 +11,9 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class QuestionResponseDto {
+public class AnswerChangeResponseDto {
     Long id;
     String content;
-    List<AnswerResponseDto> listAnswer;
-    Long examId;
+    Boolean isCorrect;
     List<Media> files;
-    LocalDateTime updatedAt;
 }
