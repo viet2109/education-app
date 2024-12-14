@@ -6,6 +6,8 @@ import {
   FaStar,
 } from "react-icons/fa6";
 import { images } from "../assets/images";
+import { Link } from "react-router-dom";
+import routers from "../configs/routers";
 
 function Home() {
   return (
@@ -26,7 +28,11 @@ function Home() {
           <p className="text-lg  md:text-xl lg:text-2xl md:!leading-loose">
             Prepare for local and international exams for free. Forever.
           </p>
-          <button className="btn-custom md:!mt-1">Take your first test</button>
+          <Link to={routers.exams}>
+            <button className="btn-custom my-2 md:my-4 md:!mt-1">
+              Take your first test
+            </button>
+          </Link>
         </div>
       </div>
       {/* des 1 */}
@@ -71,11 +77,7 @@ function Home() {
 
           {/* center */}
           <div className="flex-1 flex justify-center items-center">
-            <img
-              className="w-10/12"
-              src={images.banner2}
-              alt="banner2"
-            />
+            <img className="w-10/12" src={images.banner2} alt="banner2" />
           </div>
 
           {/* bottom */}
