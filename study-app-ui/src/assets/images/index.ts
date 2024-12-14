@@ -5,6 +5,10 @@ import rocket from "./rocket.gif";
 import noData from "./nodata.png";
 import banner1 from "./banner1.gif";
 import banner2 from "./banner2.gif";
+import correct_box from "./Correct_Box.svg"
+import incorrect_box from "./incorrect_box.svg"
+import score_rank from "./score_rank.svg"
+import accuracy from "./accuracy.svg"
 
 
 export const images = {
@@ -14,5 +18,9 @@ export const images = {
     rocket,
     noData,
     banner1,
-    banner2
+    banner2,
+    correct_box,
+    incorrect_box,
+    score_rank,
+    accuracy
 };

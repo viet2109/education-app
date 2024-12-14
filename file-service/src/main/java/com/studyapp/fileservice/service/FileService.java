@@ -35,7 +35,6 @@ public class FileService {
                 .filter(file -> file != null && !file.isEmpty()) // Loại bỏ file null hoặc rỗng
                 .distinct() // Loại bỏ các file trùng lặp
                 .toList();
-        log.info("files size: {}", distinctFiles.size());
         // Sử dụng ExecutorService để quản lý song song hóa
         ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 

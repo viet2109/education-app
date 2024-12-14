@@ -2,6 +2,8 @@ import {
   Category,
   PaginatedResponse,
   Quiz,
+  QuizAnswer,
+  QuizAnswerResponse,
   QuizPaginationFilter,
   QuizRequest,
 } from "../types";
@@ -174,3 +176,18 @@ export const createQuiz = async (quiz: QuizRequest): Promise<Quiz> => {
     dispatch(fetchEnd()); // Kết thúc fetch
   }
 };
+
+export const submitExam = async (examId: number, quizAnswer: QuizAnswer[]): Promise<QuizAnswerResponse> => {
+  dispatch(fetchStart()); // Bắt đầu fetch
+
+  try {
+    const response = await api.post(`/quizzes/${examId}/score`, quizAnswer);
+    return response.data;
+  } catch (error: any) {
+    return Promise.reject(error); // Trả lỗi về cho caller
+  } finally {
+    dispatch(fetchEnd()); // Kết thúc fetch
+  }
+};
+
+

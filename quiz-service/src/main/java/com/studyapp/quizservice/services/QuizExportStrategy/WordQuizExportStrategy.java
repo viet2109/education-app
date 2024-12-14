@@ -25,107 +25,99 @@ public class WordQuizExportStrategy implements QuizExportStrategy {
 
     @Override
     public byte[] exportQuiz(QuizChangeResponseDto quizResponseDto) {
-        XWPFDocument document = new XWPFDocument();
-        ByteArrayOutputStream out = null;
-        String keyQuizStart = "Quiz:";
-        String keyQuizCategoryStart = "Category:";
-        String keyQuestionStart = "Question:";
-        String keyAnswerStart = "Answer:";
-        String keyImageStart = "Images:";
-        String imageSplit = "-";
-        String keyCorrectAnswer = "|";
+        try (XWPFDocument document = new XWPFDocument();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 
-        try {
-            XWPFParagraph title = document.createParagraph();
-            XWPFRun titleRun = title.createRun();
-            titleRun.setText(String.format("%s %s", keyQuizStart, quizResponseDto.getTitle()));
-            titleRun.addBreak(BreakType.TEXT_WRAPPING);
-            titleRun.setText(String.format("%s %s", keyQuizCategoryStart, quizResponseDto.getCategory()));
+            addQuizInfo(document, quizResponseDto);
 
-            for (QuestionChangeResponseDto questionResponseDto : quizResponseDto.getListQuestion()) {
-                String questionContent = questionResponseDto.getContent();
-                XWPFParagraph questionParagraph = document.createParagraph();
-                XWPFRun questionParagraphRun = questionParagraph.createRun();
-                questionParagraphRun.setText(String.format("%s %s", keyQuestionStart, questionContent.trim()));
-                questionParagraphRun.addBreak(BreakType.TEXT_WRAPPING);
+            for (QuestionChangeResponseDto question : quizResponseDto.getListQuestion()) {
+                addQuestionToDocument(document, question);
+            }
 
-                if (!questionResponseDto.getFiles().isEmpty()) {
-                    questionParagraphRun.setText(String.format("%s ", keyImageStart));
-                    for (int i = 0; i < questionResponseDto.getFiles().size(); i++) {
-                        Media media = questionResponseDto.getFiles().get(i);
-                        URL url = URI.create(media.getFileUrl()).toURL();
-                        BufferedImage image = ImageIO.read(url);
-                        if (image == null) {
-                            log.error("This fileUrl is not image type");
-                            return null;
-                        }
-                        String imageFormat = getImageFormat(media.getFileType());
-                        File tempFile = File.createTempFile("tempImage", "." + imageFormat);
-                        ImageIO.write(image, imageFormat, tempFile);
-                        try (InputStream imageData = new FileInputStream(tempFile)) {
-                            int pictureType = getPictureType(imageFormat);
-                            questionParagraphRun.addPicture(imageData, pictureType, tempFile.getName(), Units.toEMU(100), Units.toEMU(50));
-                            if (i < questionResponseDto.getFiles().size() - 1) {
-                                questionParagraphRun.setText(imageSplit);
-                            }
-                        } catch (InvalidFormatException e) {
-                            log.error("Error when format type picture: {}", e.getMessage());
-                        }
-                        tempFile.delete();
-                    }
-                    questionParagraphRun.addBreak(BreakType.TEXT_WRAPPING);
-                }
+            document.write(out);
+            log.info("Word document created successfully!");
+            return out.toByteArray();
 
-                for (AnswerChangeResponseDto answerResponseDto : questionResponseDto.getListAnswer()) {
-                    String answerContent = answerResponseDto.getContent();
-                    questionParagraphRun.setText(String.format("%s %s %s %s", keyAnswerStart, answerContent.trim(), keyCorrectAnswer, answerResponseDto.getIsCorrect()));
-                    questionParagraphRun.addBreak(BreakType.TEXT_WRAPPING);
+        } catch (IOException | InvalidFormatException e) {
+            log.error("Error while exporting quiz: {}", e.getMessage());
+            return new byte[0];
+        }
+    }
 
-                    if (!answerResponseDto.getFiles().isEmpty()) {
-                        questionParagraphRun.setText(String.format("%s ", keyImageStart));
+    private void addQuizInfo(XWPFDocument document, QuizChangeResponseDto quizResponseDto) {
+        XWPFParagraph titleParagraph = document.createParagraph();
+        XWPFRun titleRun = titleParagraph.createRun();
+        titleRun.setText(String.format("Quiz: %s", quizResponseDto.getTitle()));
+        titleRun.addBreak(BreakType.TEXT_WRAPPING);
+        titleRun.setText(String.format("Category: %s", quizResponseDto.getCategory()));
+        titleRun.addBreak(BreakType.TEXT_WRAPPING);
+    }
 
-                        for (int i = 0; i < answerResponseDto.getFiles().size(); i++) {
-                            Media media = answerResponseDto.getFiles().get(i);
-                            URL url = URI.create(media.getFileUrl()).toURL();
-                            BufferedImage image = ImageIO.read(url);
-                            if (image == null) {
-                                log.error("This fileUrl is not image type");
-                                return null;
-                            }
-                            String imageFormat = getImageFormat(media.getFileType());
-                            File tempFile = File.createTempFile("tempImage", "." + imageFormat);
-                            ImageIO.write(image, imageFormat, tempFile);
-                            try (InputStream imageData = new FileInputStream(tempFile)) {
-                                int pictureType = getPictureType(imageFormat);
-                                questionParagraphRun.addPicture(imageData, pictureType, tempFile.getName(), Units.toEMU(100), Units.toEMU(50));
-                                if (i < answerResponseDto.getFiles().size() - 1) {
-                                    questionParagraphRun.setText(imageSplit);
-                                }
-                            } catch (InvalidFormatException e) {
-                                log.error("Error when format type picture: {}", e.getMessage());
-                            }
-                            tempFile.delete();
-                        }
-                        questionParagraphRun.addBreak(BreakType.TEXT_WRAPPING);
+    private void addQuestionToDocument(XWPFDocument document, QuestionChangeResponseDto question) throws IOException, InvalidFormatException {
+        XWPFParagraph questionParagraph = document.createParagraph();
+        XWPFRun questionRun = questionParagraph.createRun();
+        questionRun.setText(String.format("Question: %s", question.getContent().trim()));
+        questionRun.addBreak(BreakType.TEXT_WRAPPING);
+
+        if (!question.getFiles().isEmpty()) {
+            addMediaFiles(questionRun, question.getFiles(), "Images:");
+        }
+
+        for (AnswerChangeResponseDto answer : question.getListAnswer()) {
+            addAnswerToDocument(questionRun, answer);
+        }
+    }
+
+    private void addAnswerToDocument(XWPFRun run, AnswerChangeResponseDto answer) throws IOException, InvalidFormatException {
+        run.setText(String.format("Answer: %s | Correct: %s", answer.getContent().trim(), answer.getIsCorrect()));
+        run.addBreak(BreakType.TEXT_WRAPPING);
+
+        if (!answer.getFiles().isEmpty()) {
+            addMediaFiles(run, answer.getFiles(), "Images:");
+        }
+    }
+
+    private void addMediaFiles(XWPFRun run, java.util.List<Media> files, String label) throws IOException, InvalidFormatException {
+        run.setText(label);
+
+        for (int i = 0; i < files.size(); i++) {
+            Media media = files.get(i);
+            BufferedImage image = fetchImageFromUrl(media.getFileUrl());
+
+            if (image != null) {
+                String imageFormat = getImageFormat(media.getFileType());
+                try (InputStream imageData = convertImageToInputStream(image, imageFormat)) {
+                    int pictureType = getPictureType(imageFormat);
+                    run.addPicture(imageData, pictureType, "image", Units.toEMU(100), Units.toEMU(50));
+                    if (i < files.size() - 1) {
+                        run.setText(" - ");
                     }
                 }
             }
-
-            out = new ByteArrayOutputStream();
-            document.write(out);
-            document.close();
-
-            log.info("Tài liệu Word đã được tạo thành công!");
-        } catch (IOException e) {
-            log.error("Error occur when export: {}", e.getMessage());
         }
-        return out != null ? out.toByteArray() : new byte[0];
+        run.addBreak(BreakType.TEXT_WRAPPING);
     }
 
-    private String getImageFormat(String imageType) {
+    private BufferedImage fetchImageFromUrl(String fileUrl) {
+        try {
+            URL url = URI.create(fileUrl).toURL();
+            return ImageIO.read(url);
+        } catch (IOException e) {
+            log.error("Failed to fetch image from URL {}: {}", fileUrl, e.getMessage());
+            return null;
+        }
+    }
+
+    private InputStream convertImageToInputStream(BufferedImage image, String format) throws IOException {
+        ByteArrayOutputStream os = new ByteArrayOutputStream();
+        ImageIO.write(image, format, os);
+        return new ByteArrayInputStream(os.toByteArray());
+    }
+
+    private String getImageFormat(String fileType) {
         String regex = "/([^/]+)$";
         Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(imageType);
+        Matcher matcher = pattern.matcher(fileType);
 
         if (matcher.find()) {
             return matcher.group(1);

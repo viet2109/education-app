@@ -22,7 +22,6 @@ function QuizMedia({ files, className }: Props) {
     group[mainType].push(file as Media);
     return group;
   }, {} as Record<string, Media[]>);
-  console.log(files.length);
 
   return (
     <div className={`flex flex-col gap-y-8 cursor-auto ${className}`}>

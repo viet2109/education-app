@@ -1,5 +1,6 @@
 package com.studyapp.quizservice.controllers;
 
+import com.studyapp.quizservice.dto.request.QuizAnswerDto;
 import com.studyapp.quizservice.dto.request.QuizRequestDto;
 import com.studyapp.quizservice.dto.response.CategoryDto;
 import com.studyapp.quizservice.dto.response.QuizChangeResponseDto;
@@ -70,6 +71,11 @@ public class QuizController {
     @GetMapping("/categories")
     public ResponseEntity<List<CategoryDto>> getAllCategories() {
         return ResponseEntity.ok(quizService.getAllCategories());
+    }
+
+    @PostMapping("/{id}/score")
+    public ResponseEntity<Map<String, Object>> getScore(@PathVariable Long id, @RequestBody List<QuizAnswerDto> quizAnswerDtos) {
+        return ResponseEntity.ok(quizService.calScore(id, quizAnswerDtos));
     }
 
     @GetMapping

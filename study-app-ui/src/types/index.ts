@@ -86,6 +86,16 @@ interface BasePaginationFilter {
   sort?: string[]; // Mảng các trường và thứ tự sắp xếp (mặc định là ["id,asc"])
 }
 
+export interface QuizAnswer {
+  questionId: number;
+  answer: number[];
+}
+
+export interface QuizAnswerResponse {
+  score: number;
+  quiz: QuestionResponseDto[];
+}
+
 export interface QuestionBankPaginationFilter extends BasePaginationFilter {
   category?: string[]; // Tìm theo danh mục (có thể bỏ qua)
   createdBy?: string; // Tìm theo người tạo (có thể bỏ qua)
