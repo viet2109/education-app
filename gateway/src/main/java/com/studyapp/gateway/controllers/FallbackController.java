@@ -37,4 +37,10 @@ public class FallbackController {
         log.error("Fallback triggered for File Service. Cause: {}", throwable.getMessage());
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body("File service is unavailable. Please try again later.");
     }
+
+    @RequestMapping("/exam-history")
+    public ResponseEntity<String> examHistoryFallback(Throwable throwable) {
+        log.error("Fallback triggered for Exam History Service. Cause: {}", throwable.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body("Exam History service is unavailable. Please try again later.");
+    }
 }

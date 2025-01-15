@@ -1,10 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
+import { FastField, Form, Formik } from "formik";
 import { useEffect, useMemo, useState } from "react";
 import { FaEdit } from "react-icons/fa";
 import { FaPlus, FaRegTrashCan } from "react-icons/fa6";
 import { TbFileExport } from "react-icons/tb";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
+import Select from "react-select";
 import Swal from "sweetalert2";
 import * as Yup from "yup";
 import {
@@ -14,6 +16,7 @@ import {
   fetchQuizzes,
   importQuiz,
 } from "../api/quiz";
+import InputField from "../components/inputField";
 import Modal from "../components/modal";
 import NoDataModel from "../components/noDataModel";
 import Pagianate from "../components/paginate";
@@ -22,9 +25,6 @@ import { DEFAULT_SLATE_TIME } from "../constant";
 import { formatLocalDate } from "../helper/formatLocalDate";
 import { RootState } from "../redux/store";
 import { QuizPaginationFilter, QuizRequest } from "../types";
-import { FastField, Form, Formik } from "formik";
-import InputField from "../components/inputField";
-import Select from "react-select";
 
 const quizSchema = Yup.object().shape({
   title: Yup.string().required("The title is mandatory"),
@@ -95,7 +95,7 @@ function SettingQuiz() {
     [queryParams]
   );
 
-  const { data, refetch } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["quizzes"],
     queryFn: () => fetchQuizzes(paginationFilter),
     staleTime: DEFAULT_SLATE_TIME,
@@ -109,6 +109,7 @@ function SettingQuiz() {
       text: `Do you want to delete quiz ${id}`,
       icon: "question",
       showCancelButton: true,
+      confirmButtonColor: "#27b489",
       cancelButtonColor: "#ef4444",
     }).then(async (value) => {
       if (value.isConfirmed) {
@@ -156,26 +157,26 @@ function SettingQuiz() {
 
   const handleCreateQuiz = () => {
     Swal.fire({
-      title: "Select Quiz Creation Method",
+      title: "Chọn phương pháp tạo bài thi",
       html: `<ul class="space-y-4 mb-4">
                     <li>
-                        <label for="m-1" class="inline-flex items-center justify-between w-full p-5 text-gray-900 bg-white border border-gray-300 rounded-lg cursor-pointer has-[:checked]:border-primary has-[:checked]:text-primary hover:text-gray-900 hover:bg-gray-100">                           
+                        <label for="m-1" class="inline-flex items-center justify-between w-full p-5 text-gray-900 bg-white border border-gray-300 rounded-lg cursor-pointer has-[:checked]:border-primary has-[:checked]:text-primary hover:text-gray-900 hover:bg-gray-100">                            
                         <input type="radio" id="m-1" name="method" value="manually" class="!hidden peer" required />
                             
                         <div class="block">
-                                <div class="w-full text-lg text-left font-semibold">Manual Creation</div>
-                                <div class="w-full text-gray-500 text-sm text-left">Enter each question and answer directly.</div>
+                                <div class="w-full text-lg text-left font-semibold">Tạo thủ công</div>
+                                <div class="w-full text-gray-500 text-sm text-left">Nhập từng câu hỏi và câu trả lời trực tiếp.</div>
                             </div>
                             <svg class="w-4 h-4 min-w-4 peer-checked:text-primary ms-3 rtl:rotate-180 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"/></svg>
                         </label>
                     </li>
                     <li>
-                        <label for="m-2" class="inline-flex items-center justify-between w-full p-5 text-gray-900 bg-white border border-gray-300 rounded-lg cursor-pointer has-[:checked]:border-primary bg-red has-[:checked]:text-primary hover:text-gray-900 hover:bg-gray-100">                           
+                        <label for="m-2" class="inline-flex items-center justify-between w-full p-5 text-gray-900 bg-white border border-gray-300 rounded-lg cursor-pointer has-[:checked]:border-primary has-[:checked]:text-primary hover:text-gray-900 hover:bg-gray-100">                            
                         <input type="radio" id="m-2" name="method" value="import" class="!hidden peer" />
                             
                         <div class="block">
-                                <div class="w-full text-lg text-left font-semibold">Import from File</div>
-                                <div class="w-full text-gray-500 text-sm text-left">Upload a file to automatically generate a quiz from the prepared content.<br><font color="red"><i>Please note that this feature currently supports Word and Excel files only.*</i></font>
+                                <div class="w-full text-lg text-left font-semibold">Nhập từ tệp</div>
+                                <div class="w-full text-gray-500 text-sm text-left">Tải lên một tệp để tự động tạo bài thi từ nội dung đã chuẩn bị.<br><font color="red"><i>Lưu ý: Tính năng này hiện chỉ hỗ trợ các tệp Word và Excel.*</i></font>
 </br></div>
                             </div>
                             <svg class="w-4 h-4 min-w-4 peer-checked:text-primary ms-3 rtl:rotate-180 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 10"><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M1 5h12m0 0L9 1m4 4L9 9"/></svg>
@@ -187,14 +188,14 @@ function SettingQuiz() {
           'input[name="method"]:checked'
         )?.value;
         if (!selectedValue) {
-          Swal.showValidationMessage("Please select an option to continue");
+          Swal.showValidationMessage("Vui lòng chọn một tùy chọn để tiếp tục");
           return false;
         }
         return selectedValue;
       },
       showCancelButton: true,
       icon: "question",
-      confirmButtonText: "Next step",
+      confirmButtonText: "Bước tiếp theo",
       confirmButtonColor: "#27b489",
       cancelButtonColor: "#ef4444",
     }).then((result) => {
@@ -203,18 +204,18 @@ function SettingQuiz() {
           setQuizModalOpen(true);
         } else if (result.value === "import") {
           Swal.fire({
-            title: "Select file",
+            title: "Chọn tệp",
             input: "file",
             inputAttributes: {
               accept: ".doc,.docx,.xls,.xlsx",
-              "aria-label": "Import your file here",
+              "aria-label": "Nhập tệp của bạn tại đây",
             },
             cancelButtonColor: "#ef4444",
             showCancelButton: true,
             confirmButtonColor: "#27b489",
             preConfirm(inputValue) {
               if (!inputValue)
-                Swal.showValidationMessage("Please select a file to continue");
+                Swal.showValidationMessage("Vui lòng chọn một tệp để tiếp tục");
             },
             icon: "info",
           }).then(async (value) => {
@@ -222,7 +223,7 @@ function SettingQuiz() {
 
             if (file) {
               Swal.fire({
-                title: "Creating new quiz...",
+                title: "Đang tạo bài thi mới...",
                 allowOutsideClick: false,
                 didOpen: () => {
                   Swal.showLoading();
@@ -234,15 +235,15 @@ function SettingQuiz() {
 
                 Swal.fire({
                   icon: "success",
-                  title: "Quiz created successfully",
+                  title: "Tạo bài thi thành công",
                   showConfirmButton: true,
                   confirmButtonText: "OK",
                 });
               } catch (error) {
                 Swal.fire({
                   icon: "error",
-                  title: "Create failed",
-                  text: "An error occurred while creating the quiz. Please try again.",
+                  title: "Tạo thất bại",
+                  text: "Đã xảy ra lỗi khi tạo bài thi. Vui lòng thử lại.",
                   confirmButtonColor: "#ef4444",
                 });
               }
@@ -258,6 +259,7 @@ function SettingQuiz() {
       title: `Export quiz ${id}`,
       text: "Please choose type of file to export",
       showCancelButton: true,
+      confirmButtonColor: "#27b489",
       cancelButtonColor: "#ef4444",
       confirmButtonText: "Export",
       html: `<ul class="flex justify-center gap-3">
@@ -349,6 +351,7 @@ function SettingQuiz() {
                 category: categories[0].value,
                 duration: 60,
                 expiratedAt: "",
+                createdBy: user?.id,
               }}
               validationSchema={quizSchema}
               onSubmit={handleSubmit}
@@ -432,7 +435,7 @@ function SettingQuiz() {
                       type="submit"
                       className="w-full max-w-32 btn-custom mt-4 bg-primary text-white rounded-lg"
                     >
-                      Create Quiz
+                      Tạo bài thi
                     </button>
                   </div>
                 </Form>
@@ -447,10 +450,56 @@ function SettingQuiz() {
           className="btn-custom flex gap-2 items-center"
         >
           <FaPlus></FaPlus>
-          <span>New Quiz</span>
+          <span>Tạo bài thi</span>
         </button>
       </div>
-      {data && data?.data?.length > 0 ? (
+      {isLoading ? (
+        <table className="w-full text-left">
+          <thead className="border-b-2">
+            <tr className="*:py-4 *:*:line-clamp-1">
+              <th className="first:pl-4 last:pr-4">
+                <span>Id</span>
+              </th>
+              <th className="first:pl-4 last:pr-4">
+                <span>Category</span>
+              </th>
+              <th className="first:pl-4 last:pr-4">
+                <span>Duration</span>
+              </th>
+              <th className="first:pl-4 last:pr-4">
+                <span>Expirated at</span>
+              </th>
+              <th className="first:pl-4 last:pr-4">
+                <span>Actions</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {Array.from({ length: 5 }).map((_, index) => (
+              <tr
+                key={index}
+                className="even:bg-slate-100 animate-pulse *:py-4 *:*:line-clamp-1"
+              >
+                <td className="first:pl-4 last:pr-4">
+                  <div className="h-4 bg-slate-300 rounded"></div>
+                </td>
+                <td className="first:pl-4 last:pr-4">
+                  <div className="h-4 bg-slate-300 rounded"></div>
+                </td>
+                <td className="first:pl-4 last:pr-4">
+                  <div className="h-4 bg-slate-300 rounded"></div>
+                </td>
+                <td className="first:pl-4 last:pr-4">
+                  <div className="h-4 bg-slate-300 rounded"></div>
+                </td>
+                <td className="first:pl-4 last:pr-4">
+                  <div className="h-4 bg-slate-300 rounded"></div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : data && data?.data?.length > 0 ? (
         <>
           <table className="w-full text-left">
             <thead className="border-b-2">
@@ -472,6 +521,7 @@ function SettingQuiz() {
                 </th>
               </tr>
             </thead>
+
             <tbody>
               {data.data.map((quiz) => (
                 <tr
@@ -535,6 +585,7 @@ function SettingQuiz() {
               ))}
             </tbody>
           </table>
+
           <Pagianate
             onPageChange={() => {}}
             itemsLength={data.pagination.totalItems}
@@ -543,7 +594,10 @@ function SettingQuiz() {
           />
         </>
       ) : (
-        <NoDataModel title="You haven't create any quiz"></NoDataModel>
+        <NoDataModel
+          customBtn={<></>}
+          title="Chưa có bài thi nào được tạo."
+        ></NoDataModel>
       )}
     </>
   );

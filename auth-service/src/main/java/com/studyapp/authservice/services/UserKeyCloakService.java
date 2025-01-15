@@ -281,7 +281,6 @@ public class UserKeyCloakService {
     public String refreshAccessToken(String userId, String sessionId) {
         String url = serverUrl + "/realms/" + realm + "/protocol/openid-connect/token";
         String refreshToken = cacheClient.getRefreshToken(userId).getBody();
-        log.info(refreshToken);
         HttpHeaders headers = new HttpHeaders();
         headers.set("Content-Type", "application/x-www-form-urlencoded");
 
@@ -295,6 +294,7 @@ public class UserKeyCloakService {
 
         if (responseEntity.getStatusCode().is2xxSuccessful()) {
             JSONObject jsonObject = new JSONObject(responseEntity.getBody());
+            log.info(jsonObject.getString("refresh_token"));
             cacheClient.saveRefreshToken(userId, sessionId, jsonObject.getString("refresh_token"));
             return jsonObject.getString("access_token");
         } else {

@@ -43,7 +43,6 @@ public class CacheController {
     public ResponseEntity<String> getRefreshToken(@RequestParam String userId, HttpServletRequest request) {
         AtomicReference<String> sessionId = new AtomicReference<>("");
         Cookie[] cookies = request.getCookies();
-        log.info("cookie: " + Arrays.toString(cookies));
         if (cookies == null || cookies.length == 0) {
             throw new CacheException(CacheError.COOKIE_NOT_FOUND);
         }

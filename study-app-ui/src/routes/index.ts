@@ -13,6 +13,9 @@ import SettingProfile from "../pages/settingProfile.tsx";
 import SettingLayout from "../layouts/settingLayout.tsx";
 import SettingQuiz from "../pages/settingQuiz.tsx";
 import SettingQuizDetails from "../pages/settingQuizDetails.tsx";
+import ForgotPassword from "../pages/forgotPassword.tsx";
+import ExamHistoryDetail from "../pages/examHistoryDetail.tsx";
+import ExamHistories from "../pages/examHistories.tsx";
 
 const publicRoutes: Route[] = [
     {path: routers.home, page: Home, layout: DefaultLayout},
@@ -21,11 +24,14 @@ const publicRoutes: Route[] = [
     {path: routers.subject, page: Subject, layout: DefaultLayout},
     {path: routers.exams, page: Exams, layout: DefaultLayout},
     {path: routers.pageNotFound, page: PageNotFound, layout: DefaultLayout},
-    {path: routers.instructionExam, page: IntroductionExam, layout: DefaultLayout}
+    {path: routers.instructionExam, page: IntroductionExam, layout: DefaultLayout},
+    {path: routers.forgotPass, page: ForgotPassword, layout: DefaultLayout}
 ]
 
 const privateRoutes: Route[] = [
     {path: routers.exam, page: Exam, layout: DefaultLayout},
+    {path: routers.examHistoryDetail, page: ExamHistoryDetail, layout: DefaultLayout},
+    {path: routers.examHistories, page: ExamHistories, layout: SettingLayout},
     {path: routers.settingProfile, page: SettingProfile, layout: SettingLayout},
     {path: routers.settingQuiz, page: SettingQuiz, layout: SettingLayout},
     {path: routers.settingQuizDetails, page: SettingQuizDetails, layout: SettingLayout},

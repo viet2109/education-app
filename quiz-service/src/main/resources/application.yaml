@@ -3,9 +3,6 @@ spring:
     name: quiz-service
   config:
     import: optional:configserver:http://localhost:8888
-  cloud:
-    config:
-      name: quiz-service, keycloak
   servlet:
     multipart:
       enabled: true

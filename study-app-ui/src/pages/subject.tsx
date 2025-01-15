@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Category } from "../types/index.ts";
 import { DEFAULT_SLATE_TIME } from "../constant/index.ts";
 import CategorySkeleton from "../components/categorySkeleton.tsx";
+import ImageWithSkeleton from "../components/imageWithSkeleton.tsx";
 
 function Subject() {
   const { data: categoryList = [], isLoading } = useQuery<Category[], Error>({
@@ -43,11 +44,11 @@ function Subject() {
                         .toLowerCase()}`,
                     }}
                   >
-                    <img
-                      className="w-20 aspect-square object-cover object-center rounded-full"
+                    <ImageWithSkeleton
+                      skeletonClass="!w-20 !h-20 !rounded-full"
+                      imgClass="w-20 aspect-square object-cover object-center rounded-full"
                       src={category.imageUrl}
                       alt="logo_category"
-                      loading={"lazy"}
                     />
                     <span className="font-[500] text-center w-full break-words">
                       {category.title}

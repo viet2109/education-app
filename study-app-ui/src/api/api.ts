@@ -12,7 +12,6 @@ export const api = axios.create({
   withCredentials: true,
 });
 
-
 // Extend AxiosRequestConfig to include _retry
 interface CustomAxiosRequestConfig extends AxiosRequestConfig {
   _retry?: boolean;
@@ -52,7 +51,6 @@ api.interceptors.response.use(
       }
 
       try {
-        store.dispatch(fetchStart());
         setAuthToken(null);
         store.dispatch(refreshTokenSuccess(""));
         // Call API to refresh token
@@ -89,8 +87,6 @@ api.interceptors.response.use(
         (refreshError as any).isHandled = true;
 
         return Promise.reject(refreshError);
-      } finally {
-        store.dispatch(fetchEnd());
       }
     }
 
@@ -101,11 +97,14 @@ api.interceptors.response.use(
 api.interceptors.request.use(
   (config) => {
     // Lấy token từ localStorage (hoặc nơi bạn đã lưu)
+
     const state = store.getState();
     const token = state.auth.token;
+
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
     return config;
   },
   (error) => {

@@ -7,14 +7,13 @@ import { useNavigate, useParams } from "react-router-dom";
 import Select from "react-select";
 import Swal from "sweetalert2";
 import { createQuestion, deleteQuestion } from "../api/question";
-import { fetchManageQuiz, fetchManageQuizzes, fetchQuiz } from "../api/quiz";
+import { fetchManageQuiz } from "../api/quiz";
+import NoDataModel from "../components/noDataModel";
 import Pagianate from "../components/paginate";
 import QuestionModal from "../components/questionModal";
 import QuestionSidebar from "../components/questionSidebar";
-import { DEFAULT_SLATE_TIME } from "../constant";
 import { formatLocalDate } from "../helper/formatLocalDate";
 import { QuestionResponseDto } from "../types";
-import NoDataModel from "../components/noDataModel";
 
 function SettingQuizDetails() {
   const { id } = useParams();
@@ -135,7 +134,7 @@ function SettingQuizDetails() {
     }
   };
 
-  const { data, isLoading, error, refetch } = useQuery({
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ["quizzes"],
     queryFn: () => fetchManageQuiz(Number(id)),
     retry: false,
@@ -220,8 +219,6 @@ function SettingQuizDetails() {
     }
   }, [data?.listQuestion]);
 
-  if (isLoading || error) return <div>Loading...</div>;
-
   return (
     <>
       <button
@@ -234,161 +231,211 @@ function SettingQuizDetails() {
       <div className="mb-3">
         <h2 className="text-primary text-lg">Manage detail quiz</h2>
       </div>
-      <h2>Quiz id: {data?.id}</h2>
+      {isLoading ? (
+        <div className="h-4 w-1/4 bg-gray-300 rounded animate-pulse mb-4"></div>
+      ) : (
+        <h2>Quiz id: {data?.id}</h2>
+      )}
 
       {/* form quiz */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 *:flex *:flex-col *:gap-2 mt-3">
-        {/* title */}
-        <div>
-          <label htmlFor="title" className="cursor-pointer">
-            Title:{" "}
-          </label>
-          <textarea
-            spellCheck={false}
-            rows={4}
-            className="border-2 w-full py-2 px-4 border-slate-400 outline-none rounded-md focus:border-primary"
-            name="title"
-            id="title"
-            defaultValue={data?.title}
-          ></textarea>
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mt-3">
+          {/* Skeleton for Title */}
+          <div>
+            <div className="h-4 w-1/4 bg-gray-300 rounded animate-pulse mb-2"></div>
+            <div className="h-24 w-full bg-gray-300 rounded-md animate-pulse"></div>
+          </div>
+
+          {/* Skeleton for Category */}
+          <div>
+            <div className="h-4 w-1/4 bg-gray-300 rounded animate-pulse mb-2"></div>
+            <div className="h-10 w-full bg-gray-300 rounded-md animate-pulse"></div>
+          </div>
+
+          {/* Skeleton for Duration */}
+          <div>
+            <div className="h-4 w-1/3 bg-gray-300 rounded animate-pulse mb-2"></div>
+            <div className="h-10 w-full bg-gray-300 rounded-md animate-pulse"></div>
+          </div>
+
+          {/* Skeleton for Expiration Date */}
+          <div>
+            <div className="h-4 w-1/3 bg-gray-300 rounded animate-pulse mb-2"></div>
+            <div className="h-10 w-full bg-gray-300 rounded-md animate-pulse"></div>
+          </div>
+
+          {/* Skeleton for Questions */}
+          <div className="md:col-span-2">
+            <div className="h-4 w-1/3 bg-gray-300 rounded animate-pulse mb-2"></div>
+            <div className="h-10 w-40 bg-gray-300 rounded-md animate-pulse mb-4"></div>
+
+            {/* Skeleton for List of Questions */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[...Array(4)].map((_, index) => (
+                <div
+                  key={index}
+                  className="h-24 w-full bg-gray-300 rounded-md animate-pulse"
+                ></div>
+              ))}
+            </div>
+          </div>
         </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 *:flex *:flex-col *:gap-2 mt-3">
+            {/* title */}
+            <div>
+              <label htmlFor="title" className="cursor-pointer">
+                Title:{" "}
+              </label>
+              <textarea
+                spellCheck={false}
+                rows={4}
+                className="border-2 w-full py-2 px-4 border-slate-400 outline-none rounded-md focus:border-primary"
+                name="title"
+                id="title"
+                defaultValue={data?.title}
+              ></textarea>
+            </div>
 
-        {/* category */}
-        <div>
-          <label htmlFor="">Category: </label>
-          {data?.category && (
-            <Select
-              options={categories}
-              defaultValue={categories.find((category) => {
-                return category.value === data.category;
-              })}
-              styles={{
-                control: (baseStyles) => ({
-                  ...baseStyles,
-                  borderWidth: "2px",
-                  borderColor: "#94a3b8",
-                  boxShadow: "none",
-                  paddingLeft: "6px",
-                  "&:focus-within": {
-                    borderColor: "#27b489",
-                    boxShadow: "0 0 0.2rem rgba(39, 180, 137, 1)",
-                  },
-                }),
-              }}
-            ></Select>
-          )}
-        </div>
+            {/* category */}
+            <div>
+              <label htmlFor="">Category: </label>
+              {data?.category && (
+                <Select
+                  options={categories}
+                  defaultValue={categories.find((category) => {
+                    return category.value === data.category;
+                  })}
+                  styles={{
+                    control: (baseStyles) => ({
+                      ...baseStyles,
+                      borderWidth: "2px",
+                      borderColor: "#94a3b8",
+                      boxShadow: "none",
+                      paddingLeft: "6px",
+                      "&:focus-within": {
+                        borderColor: "#27b489",
+                        boxShadow: "0 0 0.2rem rgba(39, 180, 137, 1)",
+                      },
+                    }),
+                  }}
+                ></Select>
+              )}
+            </div>
 
-        {/* duration */}
-        <div>
-          <label htmlFor="duration" className="cursor-pointer">
-            Duration (calc by min):{" "}
-          </label>
-          <input
-            type="number"
-            id="duration"
-            name="duration"
-            min={1}
-            defaultValue={data?.duration && Math.floor(data?.duration / 60)}
-            className="border-2 p-1.5 pl-4 rounded-md outline-none focus:border-primary border-slate-400"
-          />
-        </div>
+            {/* duration */}
+            <div>
+              <label htmlFor="duration" className="cursor-pointer">
+                Duration (calc by min):{" "}
+              </label>
+              <input
+                type="number"
+                id="duration"
+                name="duration"
+                min={1}
+                defaultValue={data?.duration && Math.floor(data?.duration / 60)}
+                className="border-2 p-1.5 pl-4 rounded-md outline-none focus:border-primary border-slate-400"
+              />
+            </div>
 
-        {/* expirated */}
-        <div>
-          <label htmlFor="expirated" className="cursor-pointer">
-            Expirated:
-          </label>
-          <input
-            type="datetime-local"
-            id="expirated"
-            name="expirated"
-            defaultValue={""}
-            className="border-2 p-1.5 pl-4 rounded-md outline-none focus:border-primary border-slate-400"
-          />
-        </div>
+            {/* expirated */}
+            <div>
+              <label htmlFor="expirated" className="cursor-pointer">
+                Expirated:
+              </label>
+              <input
+                type="datetime-local"
+                id="expirated"
+                name="expirated"
+                defaultValue={""}
+                className="border-2 p-1.5 pl-4 rounded-md outline-none focus:border-primary border-slate-400"
+              />
+            </div>
 
-        {/* question */}
-        <div className="md:col-span-2">
-          <label htmlFor="">Questions: </label>
-          <button
-            type="button"
-            className="btn-custom w-fit flex items-center gap-1"
-            onClick={handleCreateQuestion}
-          >
-            <BiPlus size={18} />
-            <span>New question</span>
-          </button>
+            {/* question */}
+            <div className="md:col-span-2">
+              <label htmlFor="">Questions: </label>
+              <button
+                type="button"
+                className="btn-custom w-fit flex items-center gap-1"
+                onClick={handleCreateQuestion}
+              >
+                <BiPlus size={18} />
+                <span>New question</span>
+              </button>
 
-          {/* list question */}
-          {questions && questions.length > 0 ? (
-            <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 *:shadow-custom *:p-6 *:rounded-lg my-4 mb-0">
-              {questions
-                .slice(
-                  currentPage * itemsPerPage,
-                  currentPage * itemsPerPage + itemsPerPage
-                )
-                .map((question) => (
-                  <li
-                    key={question.id}
-                    className="hover:bg-slate-300 hover:text-white group cursor-default transition-all duration-300"
-                  >
-                    <div className="before:block before:w-6 before:h-2 before:bg-primary before:rounded-full before:absolute before:-top-3 before:left-0 relative before:transition-all before:duration-300 group-hover:before:bg-white">
-                      <div className="flex justify-between">
-                        <span>Id: {question.id}</span>
-                        <div className="flex gap-2">
-                          <FaEdit
-                            size={18}
-                            className="hover:!text-opacity-65 !text-blue-500 transition-all duration-300 cursor-pointer"
-                            onClick={() => {
-                              setSelectedQuestion((_prev) => question);
-                              toggleModal(setIsModalOpen, true);
-                            }}
-                          />
-                          <FaRegTrashCan
-                            size={18}
-                            className="hover:!text-opacity-65 !text-red-500 transition-all duration-300 cursor-pointer"
-                            onClick={() => {
-                              question.id && handleDelete(question.id);
-                            }}
-                          />
+              {/* list question */}
+              {questions && questions.length > 0 ? (
+                <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 *:shadow-custom *:p-6 *:rounded-lg my-4 mb-0">
+                  {questions
+                    .slice(
+                      currentPage * itemsPerPage,
+                      currentPage * itemsPerPage + itemsPerPage
+                    )
+                    .map((question) => (
+                      <li
+                        key={question.id}
+                        className="hover:bg-slate-300 hover:text-white group cursor-default transition-all duration-300"
+                      >
+                        <div className="before:block before:w-6 before:h-2 before:bg-primary before:rounded-full before:absolute before:-top-3 before:left-0 relative before:transition-all before:duration-300 group-hover:before:bg-white">
+                          <div className="flex justify-between">
+                            <span>Id: {question.id}</span>
+                            <div className="flex gap-2">
+                              <FaEdit
+                                size={18}
+                                className="hover:!text-opacity-65 !text-blue-500 transition-all duration-300 cursor-pointer"
+                                onClick={() => {
+                                  setSelectedQuestion((_prev) => question);
+                                  toggleModal(setIsModalOpen, true);
+                                }}
+                              />
+                              <FaRegTrashCan
+                                size={18}
+                                className="hover:!text-opacity-65 !text-red-500 transition-all duration-300 cursor-pointer"
+                                onClick={() => {
+                                  question.id && handleDelete(question.id);
+                                }}
+                              />
+                            </div>
+                          </div>
+                          <p className="quiz-title line-clamp-1">
+                            Title: {question.content}
+                          </p>
+                          <span className="text-sm italic text-gray-400 group-hover:text-white">
+                            Last updated at:{" "}
+                            {formatLocalDate(question.updatedAt)}
+                          </span>
                         </div>
-                      </div>
-                      <p className="quiz-title line-clamp-1">
-                        Title: {question.content}
-                      </p>
-                      <span className="text-sm italic text-gray-400 group-hover:text-white">
-                        Last updated at: {formatLocalDate(question.updatedAt)}
-                      </span>
-                    </div>
-                  </li>
-                ))}
-            </ul>
-          ) : (
-            <NoDataModel
-              title="This quiz has no question yet"
-              customBtn={<></>}
-            />
-          )}
+                      </li>
+                    ))}
+                </ul>
+              ) : (
+                <NoDataModel
+                  title="This quiz has no question yet"
+                  customBtn={<></>}
+                />
+              )}
 
-          {questions && questions.length > 0 && (
-            <Pagianate
-              initialPage={currentPage}
-              onPageChange={(number) => {
-                setCurrentPage(number);
-              }}
-              itemsLength={questions.length}
-              numberItemOnPage={itemsPerPage}
-            />
-          )}
-        </div>
-      </div>
-
-      <div className="grid place-items-center mt-8">
-        <button type="button" className="btn-custom">
-          Save change
-        </button>
-      </div>
+              {questions && questions.length > 0 && (
+                <Pagianate
+                  initialPage={currentPage}
+                  onPageChange={(number) => {
+                    setCurrentPage(number);
+                  }}
+                  itemsLength={questions.length}
+                  numberItemOnPage={itemsPerPage}
+                />
+              )}
+            </div>
+          </div>
+          <div className="grid place-items-center mt-8">
+            <button type="button" className="btn-custom">
+              Save change
+            </button>
+          </div>
+        </>
+      )}
 
       {/* create question form */}
       <QuestionModal
@@ -410,13 +457,6 @@ function SettingQuizDetails() {
           toggleSidebar={toggleSidebar}
         />
       )}
-      {/* {error ? (
-        <NoDataModel />
-      ) : (
-        <div>
-          <h2 className="text-primary text-lg">Manage detail quiz</h2>
-        </div>
-      )} */}
     </>
   );
 }

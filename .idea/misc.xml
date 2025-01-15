@@ -19,6 +19,7 @@
         <option value="$PROJECT_DIR$/auth-service/pom.xml" />
         <option value="$PROJECT_DIR$/file-service/pom.xml" />
         <option value="$PROJECT_DIR$/cache-service/pom.xml" />
+        <option value="$PROJECT_DIR$/examhistory-service/pom.xml" />
       </list>
     </option>
     <option name="ignoredFiles">

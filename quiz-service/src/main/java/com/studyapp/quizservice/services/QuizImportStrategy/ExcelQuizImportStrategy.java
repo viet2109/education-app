@@ -78,7 +78,7 @@ public class ExcelQuizImportStrategy implements QuizImportStrategy {
 
                 if (!category.isEmpty()) {
                     try {
-                        quiz.setCategory(Category.valueOf(category.toUpperCase()));
+                        quiz.setCategory(Category.valueOf(category.trim().toUpperCase()));
                     } catch (IllegalArgumentException e) {
                         throw new IllegalArgumentException("Invalid category: " + category);
                     }

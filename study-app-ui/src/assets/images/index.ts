@@ -8,7 +8,8 @@ import banner2 from "./banner2.gif";
 import correct_box from "./correct_box.svg"
 import incorrect_box from "./incorrect_box.svg"
 import score_rank from "./score_rank.svg"
-import accuracy from "./accuracy.svg"
+import accuracy from "./accuracy.svg";
+import partially_correct from "./partiallyCorrect.svg";
 
 
 export const images = {
@@ -22,5 +23,6 @@ export const images = {
     correct_box,
     incorrect_box,
     score_rank,
-    accuracy
+    accuracy,
+    partially_correct
 };

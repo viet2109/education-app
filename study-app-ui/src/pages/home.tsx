@@ -8,6 +8,7 @@ import {
 import { images } from "../assets/images";
 import { Link } from "react-router-dom";
 import routers from "../configs/routers";
+import ImageWithSkeleton from "../components/imageWithSkeleton";
 
 function Home() {
   return (
@@ -15,8 +16,9 @@ function Home() {
       {/* banner */}
       <div className="md:flex justify-center md:gap-8 items-center">
         <div className="w-8/12 lg:w-5/12 mx-auto lg:mx-0 flex justify-center items-center">
-          <img
-            className="w-full lg:w-9/12"
+          <ImageWithSkeleton
+            imgClass="w-full lg:w-9/12"
+            skeletonClass="mt-6"
             src={images.banner1}
             alt="banner1"
           />
@@ -77,7 +79,12 @@ function Home() {
 
           {/* center */}
           <div className="flex-1 flex justify-center items-center">
-            <img className="w-10/12" src={images.banner2} alt="banner2" />
+            <ImageWithSkeleton
+              imgClass="w-10/12"
+              src={images.banner2}
+              skeletonClass="my-4 md:my-0 md:mx-4"
+              alt="banner2"
+            />
           </div>
 
           {/* bottom */}

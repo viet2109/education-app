@@ -7,6 +7,8 @@ import com.studyapp.cacheservice.exceptions.CacheException;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @RequiredArgsConstructor
 public class RefreshTokenService {
+    private static final Logger log = LoggerFactory.getLogger(RefreshTokenService.class);
     String REFRESH_TOKEN_PREFIX = "refresh_token";
     RedisTemplate<String, String> redisTemplate;
 
@@ -28,7 +31,9 @@ public class RefreshTokenService {
 
     // Lấy refresh token từ Redis
     public String getRefreshToken(String userId, String sessionId) {
+
         if (refreshTokenExists(userId, sessionId)) throw new CacheException(CacheError.KEY_NOT_FOUND);
+
         String key = String.format("%s:%s:%s", REFRESH_TOKEN_PREFIX, userId, sessionId);
         return redisTemplate.opsForValue().get(key);
     }
@@ -56,7 +61,7 @@ public class RefreshTokenService {
         // Tính số giây còn lại từ thời điểm hiện tại đến khi hết hạn
         long currentTimeInMillis = System.currentTimeMillis();
         long expirationTimeInMillis = expirationDate.getTime();
-
+        log.info("{} {} {}", currentTimeInMillis, expirationTimeInMillis, (expirationTimeInMillis - currentTimeInMillis) / 1000);
         // Trả về TTL bằng giây
         return (expirationTimeInMillis - currentTimeInMillis) / 1000;
     }

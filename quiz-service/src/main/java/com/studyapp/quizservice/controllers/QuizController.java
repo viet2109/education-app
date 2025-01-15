@@ -1,5 +1,6 @@
 package com.studyapp.quizservice.controllers;
 
+import com.studyapp.quizservice.client.examHistory.dto.response.ExamHistoryResponseDto;
 import com.studyapp.quizservice.dto.request.QuizAnswerDto;
 import com.studyapp.quizservice.dto.request.QuizRequestDto;
 import com.studyapp.quizservice.dto.response.CategoryDto;
@@ -10,6 +11,7 @@ import com.studyapp.quizservice.services.QuizImportService;
 import com.studyapp.quizservice.services.QuizService;
 import com.studyapp.quizservice.utils.JwtUtils;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
@@ -74,8 +76,8 @@ public class QuizController {
     }
 
     @PostMapping("/{id}/score")
-    public ResponseEntity<Map<String, Object>> getScore(@PathVariable Long id, @RequestBody List<QuizAnswerDto> quizAnswerDtos) {
-        return ResponseEntity.ok(quizService.calScore(id, quizAnswerDtos));
+    public ResponseEntity<ExamHistoryResponseDto> calQuiz(@PathVariable Long id, @Valid @RequestBody QuizAnswerDto quizAnswerDto) {
+        return ResponseEntity.ok(quizService.calculateScore(id, quizAnswerDto));
     }
 
     @GetMapping
