@@ -28,6 +28,6 @@ public class QuizRequestDto {
     @Future(message = "The expiration date must be in the future")
     LocalDateTime expiratedAt;
 
-    @NotBlank(message = "The title is mandatory")
+    @NotBlank(message = "The createdBy is mandatory")
     String createdBy;
 }

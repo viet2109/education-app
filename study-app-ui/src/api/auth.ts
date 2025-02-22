@@ -15,8 +15,6 @@ export const login = async (
     setAuthToken(data.accessToken);
     return data;
   } catch (error: any) {
-    
-
     return Promise.reject(error); // Trả lỗi về cho caller
   } finally {
     store.dispatch(fetchEnd());
@@ -40,8 +38,22 @@ export const logout = async (userId: string) => {
     await api.post(`/auth/users/${userId}/logout`);
     store.dispatch(logOutSuccess());
   } catch (error: any) {
-    
+    return Promise.reject(error); // Trả lỗi về cho caller
+  } finally {
+    store.dispatch(fetchEnd());
+  }
+};
 
+export const forgotPass = async (email: string) => {
+  store.dispatch(fetchStart());
+  try {
+    await api.post(`/auth/password/forgot-password`, email, {
+      headers: {
+        "Content-Type": "text/plain", // Gửi email dưới dạng chuỗi văn bản
+      },
+    });
+    store.dispatch(logOutSuccess());
+  } catch (error: any) {
     return Promise.reject(error); // Trả lỗi về cho caller
   } finally {
     store.dispatch(fetchEnd());

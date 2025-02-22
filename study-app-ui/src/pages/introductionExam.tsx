@@ -6,6 +6,7 @@ import routers from "../configs/routers.ts";
 import { fetchQuiz } from "../api/quiz.ts";
 import { Quiz } from "../types/index.ts";
 import { useQuery } from "@tanstack/react-query";
+import ImageWithSkeleton from "../components/imageWithSkeleton.tsx";
 
 interface IntroductionExamProps {}
 
@@ -80,9 +81,10 @@ const IntroductionExam: FC<IntroductionExamProps> = () => {
           </div>
         </div>
         <div className="relative grid place-items-center -z-10 lg:basis-1/3">
-          <img
+          <ImageWithSkeleton
             src={images.rocket}
-            className="object-contain w-1/2 lg:w-full as -rotate-45"
+            skeletonClass="mt-4 lg:mt-0 lg:ml-4"
+            imgClass="object-contain w-1/2 lg:w-full as -rotate-45"
             alt="rocket"
           />
         </div>

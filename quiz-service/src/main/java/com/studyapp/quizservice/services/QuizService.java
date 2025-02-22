@@ -1,5 +1,9 @@
 package com.studyapp.quizservice.services;
 
+import com.studyapp.quizservice.client.examHistory.ExamHistoryClient;
+import com.studyapp.quizservice.client.examHistory.dto.ExamHistoryDetailDto;
+import com.studyapp.quizservice.client.examHistory.dto.request.ExamHistoryRequestDto;
+import com.studyapp.quizservice.client.examHistory.dto.response.ExamHistoryResponseDto;
 import com.studyapp.quizservice.client.question.QuestionClient;
 import com.studyapp.quizservice.client.question.dto.response.AnswerChangeResponseDto;
 import com.studyapp.quizservice.client.question.dto.response.QuestionChangeResponseDto;
@@ -40,13 +44,13 @@ public class QuizService {
     QuestionClient questionClient;
     UserClient userClient;
     QuizMapper quizMapper;
+    ExamHistoryClient examHistoryClient;
 
     public List<CategoryDto> getAllCategories() {
         return Category.getAll();
     }
 
-    public Map<String, Object> calScore(Long quizId, List<QuizAnswerDto> quizAnswerDtos) {
-        Map<String, Object> result = new HashMap<>();
+    public ExamHistoryResponseDto calculateScore(Long quizId, QuizAnswerDto quizAnswerDto) {
 
         // Lấy danh sách câu hỏi từ QuestionService
         List<QuestionChangeResponseDto> questionChangeResponseDtos = questionClient
@@ -54,38 +58,58 @@ public class QuizService {
                 .getBody();
 
         if (questionChangeResponseDtos == null || questionChangeResponseDtos.isEmpty()) {
-            result.put("score", 0);
-            result.put("quiz", Collections.emptyList());
-            return result;
+            throw new IllegalArgumentException("No questions found for the given quizId.");
         }
 
-        // Điểm tối đa
-        int maxScore = 10;
-        double pointPerQuestion = (double) maxScore / questionChangeResponseDtos.size();
+        // Danh sách các đáp án đúng
+        Set<Long> correctAnswers = questionChangeResponseDtos.stream()
+                .flatMap(dto -> dto.getListAnswer().stream())
+                .filter(AnswerChangeResponseDto::getIsCorrect)
+                .map(AnswerChangeResponseDto::getId)
+                .collect(Collectors.toSet());
 
-        // Tạo Map từ câu trả lời của người dùng
-        Map<Long, List<Long>> userAnswersMap = quizAnswerDtos.stream()
-                .collect(Collectors.toMap(QuizAnswerDto::getQuestionId, QuizAnswerDto::getAnswer));
+        // Tính điểm mỗi câu hỏi
+        final double maxScore = 10.0;
+        final double pointPerQuestion = maxScore / questionChangeResponseDtos.size();
 
-        // Tính tổng điểm
-        double totalScore = 0;
-        for (QuestionChangeResponseDto question : questionChangeResponseDtos) {
-            List<Long> userAnswers = userAnswersMap.getOrDefault(question.getId(), Collections.emptyList());
-            totalScore += calculateQuestionScore(question, userAnswers, pointPerQuestion);
-        }
+        // Tính tổng điểm của người dùng
+        double totalScore = questionChangeResponseDtos.stream()
+                .mapToDouble(question -> calculateQuestionScore(
+                        question,
+                        quizAnswerDto.getUserAnswers().getOrDefault(question.getId(), Collections.emptyList()),
+                        pointPerQuestion
+                ))
+                .sum();
 
         // Làm tròn điểm
         double roundedScore = Math.round(totalScore * 100.0) / 100.0;
 
-        result.put("score", roundedScore);
-        result.put("quiz", questionChangeResponseDtos);
+        // Xây dựng danh sách chi tiết lịch sử bài thi
+        List<ExamHistoryDetailDto> examHistoryDetails = quizAnswerDto.getUserAnswers().entrySet().stream()
+                .flatMap(entry -> entry.getValue().stream().map(answerId ->
+                        ExamHistoryDetailDto.builder()
+                                .questionId(entry.getKey())
+                                .answerId(answerId)
+                                .isCorrect(correctAnswers.contains(answerId))
+                                .build()
+                ))
+                .collect(Collectors.toList());
 
-        return result;
+        // Tạo ExamHistoryRequestDto
+        ExamHistoryRequestDto examHistoryRequestDto = ExamHistoryRequestDto.builder()
+                .startedAt(quizAnswerDto.getStartedAt())
+                .finishedAt(quizAnswerDto.getFinishedAt())
+                .score(roundedScore)
+                .examHistoryDetail(examHistoryDetails)
+                .examId(quizId)
+                .userId(quizAnswerDto.getUserId())
+                .build();
+
+        // Gửi dữ liệu tới ExamHistoryClient và trả về kết quả
+        return examHistoryClient.createExamHistory(examHistoryRequestDto).getBody();
     }
 
-    private double calculateQuestionScore(QuestionChangeResponseDto question,
-                                          List<Long> userAnswers,
-                                          double pointPerQuestion) {
+    private double calculateQuestionScore(QuestionChangeResponseDto question, List<Long> userAnswers, double pointPerQuestion) {
         List<Long> correctAnswers = question.getListAnswer().stream()
                 .filter(AnswerChangeResponseDto::getIsCorrect)
                 .map(AnswerChangeResponseDto::getId)
@@ -101,7 +125,6 @@ public class QuizService {
                 .mapToDouble(answer -> pointPerCorrectAnswer)
                 .sum();
     }
-
 
     public QuizResponseDto createExam(QuizRequestDto requestDto) {
         userClient.findUserById(requestDto.getCreatedBy());
@@ -139,10 +162,7 @@ public class QuizService {
         questionClient.deleteQuestionByIdsOrExamId(null, id);
     }
 
-    public Page<QuizResponseDto> getQuizzesByQuery(String title, List<String> categoryList, String createdBy,
-                                                   Integer minDuration, Integer maxDuration,
-                                                   LocalDateTime expiratedAtAfter, LocalDateTime expiratedAtBefore,
-                                                   Pageable pageable) {
+    public Page<QuizResponseDto> getQuizzesByQuery(String title, List<String> categoryList, String createdBy, Integer minDuration, Integer maxDuration, LocalDateTime expiratedAtAfter, LocalDateTime expiratedAtBefore, Pageable pageable) {
         Specification<QuizEntity> spec = Specification.where(null);
 
         if (title != null && !title.isEmpty()) {
@@ -150,18 +170,14 @@ public class QuizService {
         }
 
         if (categoryList != null && !categoryList.isEmpty()) {
-            List<Category> categories = categoryList.stream()
-                    .map(String::toUpperCase)
-                    .map(catStr -> {
-                        try {
-                            return Category.valueOf(catStr);
-                        } catch (IllegalArgumentException e) {
-                            // Log or handle invalid categories (in this case, ignoring invalid categories)
-                            return null;
-                        }
-                    })
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toList());
+            List<Category> categories = categoryList.stream().map(String::toUpperCase).map(catStr -> {
+                try {
+                    return Category.valueOf(catStr);
+                } catch (IllegalArgumentException e) {
+                    // Log or handle invalid categories (in this case, ignoring invalid categories)
+                    return null;
+                }
+            }).filter(Objects::nonNull).collect(Collectors.toList());
 
             if (!categories.isEmpty()) {
                 spec = spec.and(QuizSpecification.hasAnyCategory(categories));
@@ -191,9 +207,7 @@ public class QuizService {
         return quizDao.findAll(spec, pageable).map(quizMapper::entityToRpDto);
     }
 
-    public List<QuizResponseDto> getQuizzesByQueryNoPagination(String title, List<String> categoryList, String createdBy,
-                                                               Integer minDuration, Integer maxDuration,
-                                                               LocalDateTime expiratedAtAfter, LocalDateTime expiratedAtBefore) {
+    public List<QuizResponseDto> getQuizzesByQueryNoPagination(String title, List<String> categoryList, String createdBy, Integer minDuration, Integer maxDuration, LocalDateTime expiratedAtAfter, LocalDateTime expiratedAtBefore) {
         Specification<QuizEntity> spec = Specification.where(null);
 
         if (title != null && !title.isEmpty()) {
@@ -201,18 +215,14 @@ public class QuizService {
         }
 
         if (categoryList != null && !categoryList.isEmpty()) {
-            List<Category> categories = categoryList.stream()
-                    .map(String::toUpperCase)
-                    .map(catStr -> {
-                        try {
-                            return Category.valueOf(catStr);
-                        } catch (IllegalArgumentException e) {
-                            // Log hoặc xử lý các category không hợp lệ (trong trường hợp này bỏ qua)
-                            return null;
-                        }
-                    })
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toList());
+            List<Category> categories = categoryList.stream().map(String::toUpperCase).map(catStr -> {
+                try {
+                    return Category.valueOf(catStr);
+                } catch (IllegalArgumentException e) {
+                    // Log hoặc xử lý các category không hợp lệ (trong trường hợp này bỏ qua)
+                    return null;
+                }
+            }).filter(Objects::nonNull).collect(Collectors.toList());
 
             if (!categories.isEmpty()) {
                 spec = spec.and(QuizSpecification.hasAnyCategory(categories));
@@ -239,16 +249,11 @@ public class QuizService {
             spec = spec.and(QuizSpecification.expiratedAtBefore(expiratedAtBefore));
         }
 
-        return quizDao.findAll(spec).stream()
-                .map(quizMapper::entityToRpDto)
-                .collect(Collectors.toList());
+        return quizDao.findAll(spec).stream().map(quizMapper::entityToRpDto).collect(Collectors.toList());
     }
 
 
-    public Page<QuizChangeResponseDto> getQuizzesManageByQuery(String title, List<String> categoryList, String createdBy,
-                                                               Integer minDuration, Integer maxDuration,
-                                                               LocalDateTime expiratedAtAfter, LocalDateTime expiratedAtBefore,
-                                                               Pageable pageable) {
+    public Page<QuizChangeResponseDto> getQuizzesManageByQuery(String title, List<String> categoryList, String createdBy, Integer minDuration, Integer maxDuration, LocalDateTime expiratedAtAfter, LocalDateTime expiratedAtBefore, Pageable pageable) {
         Specification<QuizEntity> spec = Specification.where(null);
 
         if (title != null && !title.isEmpty()) {
@@ -256,18 +261,14 @@ public class QuizService {
         }
 
         if (categoryList != null && !categoryList.isEmpty()) {
-            List<Category> categories = categoryList.stream()
-                    .map(String::toUpperCase)
-                    .map(catStr -> {
-                        try {
-                            return Category.valueOf(catStr);
-                        } catch (IllegalArgumentException e) {
-                            // Log or handle invalid categories (in this case, ignoring invalid categories)
-                            return null;
-                        }
-                    })
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toList());
+            List<Category> categories = categoryList.stream().map(String::toUpperCase).map(catStr -> {
+                try {
+                    return Category.valueOf(catStr);
+                } catch (IllegalArgumentException e) {
+                    // Log or handle invalid categories (in this case, ignoring invalid categories)
+                    return null;
+                }
+            }).filter(Objects::nonNull).collect(Collectors.toList());
 
             if (!categories.isEmpty()) {
                 spec = spec.and(QuizSpecification.hasAnyCategory(categories));

@@ -98,6 +98,17 @@ spring:
                 name: cacheServiceCB
                 fallbackUri: forward:/fallback/cache
                 timeLimiterEnabled: true
+        - id: examHistoryService
+          uri: lb://EXAMHISTORY-SERVICE
+          predicates:
+            - Path=${app.apiPrefix}/exam-histories/**
+          filters:
+            - StripPrefix=2
+            - name: CircuitBreaker
+              args:
+                name: examHistoryServiceCB
+                fallbackUri: forward:/fallback/exam-history
+                timeLimiterEnabled: true
 
 resilience4j:
   circuitbreaker:
@@ -139,6 +150,8 @@ resilience4j:
         baseConfig: default
       quizServiceCB:
         baseConfig: default
+      examHistoryServiceCB:
+        baseConfig: default
       authServiceCB:
         baseConfig: authConfig
       fileServiceCB:
@@ -156,6 +169,8 @@ resilience4j:
       questionServiceTL:
         baseConfig: default
       quizServiceTL:
+        baseConfig: default
+      examhistoryServiceTL:
         baseConfig: default
       authServiceTL:
         baseConfig: default

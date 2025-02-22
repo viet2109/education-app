@@ -7,6 +7,7 @@ import { Navigation } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Media } from "../types";
 import { FaFileLines } from "react-icons/fa6";
+import ImageWithSkeleton from "./imageWithSkeleton";
 
 interface Props {
   files: (Media | File)[];
@@ -51,10 +52,11 @@ function QuizMedia({ files, className }: Props) {
               <SwiperSlide key={file.id}>
                 <Zoom>
                   <div className="flex justify-center">
-                    <img
+                    <ImageWithSkeleton
                       src={file.fileUrl}
+                      skeletonClass="!w-60 !h-36"
                       alt={file.filename}
-                      className="w-20"
+                      imgClass="w-20"
                     />
                   </div>
                 </Zoom>

@@ -68,6 +68,22 @@ export interface AnswerResponseDto {
   isCorrect?: boolean;
 }
 
+export interface Page<T> {
+  content: T[]; // Dữ liệu của trang hiện tại (một mảng đối tượng).
+  number: number; // Số trang hiện tại (bắt đầu từ 0).
+  size: number; // Số lượng phần tử trong mỗi trang.
+  totalElements: number; // Tổng số phần tử trong toàn bộ dữ liệu.
+  totalPages: number; // Tổng số trang.
+  empty: boolean;
+  numberOfElements: number;
+  pageable: Pageable;
+}
+
+export interface Pageable {
+  pageNumber: number;
+  pageSize: number;
+}
+
 export interface Pagination {
   page: number; // Số trang hiện tại
   pageSize: number; // Số lượng mục trên mỗi trang
@@ -87,8 +103,29 @@ interface BasePaginationFilter {
 }
 
 export interface QuizAnswer {
+  userAnswers: {
+    [questionId: number]: number[]; // Map từ Question ID (number) tới danh sách Answer ID (number[])
+  };
+  userId: string; // userId bắt buộc, không được để trống
+  startedAt: string; // Thời gian bắt đầu (ISO 8601 format: yyyy-MM-dd'T'HH:mm:ss)
+  finishedAt: string; // Thời gian kết thúc (ISO 8601 format: yyyy-MM-dd'T'HH:mm:ss)
+}
+
+export interface ExamHistoryDetail {
+  id: number;
   questionId: number;
-  answer: number[];
+  answerId: number;
+  isCorrect: boolean;
+}
+
+export interface ExamHistory {
+  id: number; // Long id (converted to number trong TypeScript)
+  startedAt: string; // LocalDateTime, có thể sử dụng dạng ISO 8601 string (YYYY-MM-DDTHH:MM:SS)
+  finishedAt: string; // LocalDateTime, dạng ISO 8601 string (YYYY-MM-DDTHH:MM:SS)
+  score: number; // Double score (chuyển thành kiểu number trong TypeScript)
+  userId: string; // String userId
+  exam: Quiz; // Một đối tượng Quiz
+  examHistoryDetail: ExamHistoryDetail[]; // Một mảng các đối tượng ExamHistoryDetail
 }
 
 export interface QuizAnswerResponse {
@@ -110,6 +147,7 @@ export interface QuizPaginationFilter extends BasePaginationFilter {
   maxDuration?: number; // Tìm theo thời gian tối đa (có thể bỏ qua)
   expiratedAtAfter?: string; // Tìm theo thời gian hết hạn sau (có thể bỏ qua)
   expiratedAtBefore?: string; // Tìm theo thời gian hết hạn trước (có thể bỏ qua)
+  paged?: boolean
 }
 export interface Media {
   id: number; // Sử dụng number cho kiểu Long

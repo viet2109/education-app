@@ -1,5 +1,6 @@
 package com.studyapp.quizservice.controllers;
 
+import com.studyapp.quizservice.client.examHistory.dto.response.ExamHistoryResponseDto;
 import com.studyapp.quizservice.dto.request.QuizAnswerDto;
 import com.studyapp.quizservice.dto.request.QuizRequestDto;
 import com.studyapp.quizservice.dto.response.CategoryDto;
@@ -10,9 +11,11 @@ import com.studyapp.quizservice.services.QuizImportService;
 import com.studyapp.quizservice.services.QuizService;
 import com.studyapp.quizservice.utils.JwtUtils;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +37,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/quizzes")
 @RequiredArgsConstructor
@@ -74,8 +78,8 @@ public class QuizController {
     }
 
     @PostMapping("/{id}/score")
-    public ResponseEntity<Map<String, Object>> getScore(@PathVariable Long id, @RequestBody List<QuizAnswerDto> quizAnswerDtos) {
-        return ResponseEntity.ok(quizService.calScore(id, quizAnswerDtos));
+    public ResponseEntity<ExamHistoryResponseDto> calQuiz(@PathVariable Long id, @Valid @RequestBody QuizAnswerDto quizAnswerDto) {
+        return ResponseEntity.ok(quizService.calculateScore(id, quizAnswerDto));
     }
 
     @GetMapping
@@ -195,7 +199,7 @@ public class QuizController {
 
     @PostMapping(value = "/import")
     public ResponseEntity<QuizResponseDto> createListQuestionByImport(@RequestPart MultipartFile file, HttpServletRequest request) {
-
+        log.info(JwtUtils.getUserIdFromToken(request));
         QuizResponseDto quizResponseDtos = quizImportService.importQuestions(file, JwtUtils.getUserIdFromToken(request));
         return ResponseEntity.ok().body(quizResponseDtos);
     }

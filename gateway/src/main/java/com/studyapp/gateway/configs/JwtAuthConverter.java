@@ -1,6 +1,8 @@
 package com.studyapp.gateway.configs;
 
 import jakarta.annotation.Nonnull;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -11,15 +13,19 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtGra
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Mono;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@Slf4j
 @Component
 public class JwtAuthConverter implements Converter<Jwt, Mono<JwtAuthenticationToken>> {
 
     private final JwtGrantedAuthoritiesConverter jwtGrantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
-
+    @Value("${app.keycloak.admin.clientId}")
+    private String clientId;
 
     @Override
     public Mono<JwtAuthenticationToken> convert(@Nonnull Jwt jwt) {
@@ -37,11 +43,11 @@ public class JwtAuthConverter implements Converter<Jwt, Mono<JwtAuthenticationTo
     private Collection<? extends GrantedAuthority> extractResourceRoles(Jwt jwt) {
         Map<String, Object> realmAccess = jwt.getClaim("realm_access");
         Map<String, Object> resourceAccess = jwt.getClaim("resource_access");
-
+        log.info("{}", jwt.getClaims());
         Collection<String> allRoles = new ArrayList<>();
 
         if (resourceAccess != null) {
-            Map<String, Object> account = (Map<String, Object>) resourceAccess.get("account");
+            Map<String, Object> account = (Map<String, Object>) resourceAccess.get(clientId);
             if (account != null && account.containsKey("roles")) {
                 Collection<String> resourceRoles = (Collection<String>) account.get("roles");
                 allRoles.addAll(resourceRoles);

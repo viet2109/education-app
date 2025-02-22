@@ -26,121 +26,72 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class WordQuizImportStrategy implements QuizImportStrategy {
+
     private static final Logger log = LoggerFactory.getLogger(WordQuizImportStrategy.class);
+
+    private static final String KEY_QUIZ_START = "Quiz:";
+    private static final String KEY_QUIZ_CATEGORY_START = "Category:";
+    private static final String KEY_IMAGE_START = "Images:";
+    private static final String KEY_QUESTION_START = "Question:";
+    private static final String KEY_ANSWER_START = "Answer:";
+    private static final String KEY_CORRECT_ANSWER = "|";
+    private static final String IMAGE_SPLIT = "-";
+
+    private static final String QUESTION_MEDIA = "q";
+    private static final String ANSWER_MEDIA = "a";
+
     private final QuizService quizService;
     private final QuestionClient questionClient;
 
     @Override
     public QuizResponseDto convertFileToDto(MultipartFile multipartFile, String userId) {
-        String keyQuizStart = "Quiz:";
-        String keyQuizCategoryStart = "Category:";
-        String keyImageStart = "Images:";
-        String keyQuestionStart = "Question:";
-        String keyAnswerStart = "Answer:";
-        String keyCorrectAnswer = "|";
-        String questionMedia = "q";
-        String answerMedia = "a";
-        String imageSplit = "-";
-
         try (XWPFDocument document = new XWPFDocument(multipartFile.getInputStream())) {
             List<XWPFParagraph> paragraphs = document.getParagraphs();
+
             QuizRequestDto quizRequestDto = QuizRequestDto.builder().createdBy(userId).build();
             List<QuestionRequestFeignDto> questionRequestDtos = new ArrayList<>();
+
             List<XWPFPictureData> allPictures = getAllPictures(document);
             List<MultipartFile> questionFiles = new ArrayList<>();
+            List<MultipartFile> answerFiles = new ArrayList<>();
             List<String> questionFilesKey = new ArrayList<>();
             List<String> answerFilesKey = new ArrayList<>();
-            List<MultipartFile> answerFiles = new ArrayList<>();
+
             int fileIndex = 0;
 
             for (XWPFParagraph paragraph : paragraphs) {
                 String paragraphText = paragraph.getText().trim();
                 if (paragraphText.isEmpty()) continue;
+
+                QuestionRequestFeignDto questionRequestDto = initializeQuestionDto();
                 String typeMediaList = "";
                 int indexAnswer = -1;
-                QuestionRequestFeignDto questionRequestDto = QuestionRequestFeignDto
-                        .builder()
-                        .filesIndex(new ArrayList<>())
-                        .listAnswer(new ArrayList<>())
-                        .build();
 
                 for (String lineText : paragraphText.split("\n")) {
-                    //Image
-                    if (lineText.trim().startsWith(keyImageStart)) {
-                        for (int i = 0; i < lineText.trim().split(imageSplit, -1).length; i++) {
-                            MultipartFile file = new CustomMultipartFile(
-                                    allPictures.get(fileIndex).getFileName(),
-                                    allPictures.get(fileIndex).getFileName(),
-                                    "image/" + getFileExtension(allPictures.get(fileIndex)),
-                                    allPictures.get(fileIndex).getData()
-                            );
-                            if (typeMediaList.equals(questionMedia)) {
-                                if (fileIndex < allPictures.size()) {
-                                    questionFiles.add(file);
-                                    questionFilesKey.add(String.valueOf(fileIndex));
-                                    questionRequestDto.getFilesIndex().add(String.valueOf(fileIndex++));
-                                }
-                            } else if (typeMediaList.equals(answerMedia)) {
-                                if (fileIndex < allPictures.size()) {
-                                    answerFiles.add(file);
-                                    answerFilesKey.add(String.valueOf(fileIndex));
-                                    questionRequestDto.getListAnswer().get(indexAnswer).getFilesIndex().add(String.valueOf(fileIndex++));
-                                }
-                            }
-                        }
-                    }
-                    // text line
-                    else {
-                        if (lineText.startsWith(keyQuizStart)) {
-                            String title = lineText.substring(keyQuizStart.length()).trim();
-                            quizRequestDto.setTitle(title);
-                        } else if (lineText.startsWith(keyQuizCategoryStart)) {
-                            String categoryName = lineText.substring(keyQuizCategoryStart.length()).trim();
-                            try {
-                                Category category = Category.valueOf(categoryName.toUpperCase());
-                                quizRequestDto.setCategory(category);
-
-                            } catch (IllegalArgumentException exception) {
-                                log.error("Category type has no constant with the specified name: {}", categoryName);
-                            }
-                        } else if (lineText.startsWith(keyQuestionStart)) {
-                            String content = lineText.substring(keyQuestionStart.length()).trim();
-                            questionRequestDto.setContent(content);
-                            typeMediaList = questionMedia;
-                        } else if (lineText.startsWith(keyAnswerStart)) {
-                            String content = lineText.substring(keyAnswerStart.length(), lineText.lastIndexOf(keyCorrectAnswer)).trim();
-                            boolean isCorrect = Boolean.parseBoolean(lineText.substring(lineText.lastIndexOf(keyCorrectAnswer) + 1).trim());
-                            typeMediaList = answerMedia;
+                    if (lineText.trim().startsWith(KEY_IMAGE_START)) {
+                        fileIndex = processImageLine(lineText, typeMediaList, allPictures, questionFiles, answerFiles, questionFilesKey, answerFilesKey, questionRequestDto, indexAnswer, fileIndex);
+                    } else {
+                        processTextLine(lineText, quizRequestDto, questionRequestDto);
+                        if (lineText.startsWith(KEY_ANSWER_START)) {
+                            typeMediaList = ANSWER_MEDIA;
                             indexAnswer++;
-                            AnswerRequestFeignDto answerRequestDto = AnswerRequestFeignDto
-                                    .builder()
-                                    .isCorrect(isCorrect)
-                                    .content(content)
-                                    .filesIndex(new ArrayList<>())
-                                    .build();
-                            questionRequestDto.getListAnswer().add(answerRequestDto);
+                        } else if (lineText.startsWith(KEY_QUESTION_START)) {
+                            typeMediaList = QUESTION_MEDIA;
                         }
                     }
                 }
-                if (questionRequestDto.getContent() != null && !questionRequestDto.getContent().trim().isEmpty())
+
+                if (questionRequestDto.getContent() != null && !questionRequestDto.getContent().isEmpty()) {
                     questionRequestDtos.add(questionRequestDto);
+                }
             }
 
-            long examId = quizService.createExam(quizRequestDto).getId();
-            questionRequestDtos.forEach(questionRequestFeignDto -> questionRequestFeignDto.setExamId(examId));
-
-            ObjectMapper objectMapper = new ObjectMapper();
-            String questionRequestFeignDtoListJson = objectMapper.writeValueAsString(questionRequestDtos);
-            questionClient.createListQuestionByFeign(questionRequestFeignDtoListJson, questionFilesKey.isEmpty() ? null : questionFilesKey, questionFiles.isEmpty() ? null : questionFiles, answerFilesKey.isEmpty() ? null : answerFilesKey, answerFiles.isEmpty() ? null : answerFiles);
-
-            return quizService.getExamById(examId);
-
-        } catch (IOException exception) {
-            log.error("Error when import file: {}", exception.getMessage());
+            return saveQuizAndQuestions(quizRequestDto, questionRequestDtos, questionFiles, questionFilesKey, answerFiles, answerFilesKey);
+        } catch (IOException e) {
+            log.error("Error when importing file: {}", e.getMessage());
         }
         return null;
     }
-
 
     private List<XWPFPictureData> getAllPictures(XWPFDocument document) {
         return document.getParagraphs().stream()
@@ -150,11 +101,86 @@ public class WordQuizImportStrategy implements QuizImportStrategy {
                 .toList();
     }
 
+    private int processImageLine(String lineText, String typeMediaList, List<XWPFPictureData> allPictures,
+                                 List<MultipartFile> questionFiles, List<MultipartFile> answerFiles,
+                                 List<String> questionFilesKey, List<String> answerFilesKey,
+                                 QuestionRequestFeignDto questionRequestDto, int indexAnswer, int fileIndex) {
+        String[] imageParts = lineText.split(IMAGE_SPLIT, -1);
+        for (int i = 0; i < imageParts.length; i++) {
+            if (fileIndex >= allPictures.size()) break;
+            MultipartFile file = createMultipartFile(allPictures.get(fileIndex));
 
-    private String getFileExtension(XWPFPictureData xwpfPictureData) {
-        if (xwpfPictureData.suggestFileExtension() != null) return xwpfPictureData.suggestFileExtension();
-        return xwpfPictureData.getFileName().substring(xwpfPictureData.getFileName().lastIndexOf('.') + 1);
+            if (QUESTION_MEDIA.equals(typeMediaList)) {
+                questionFiles.add(file);
+                questionFilesKey.add(String.valueOf(fileIndex));
+                questionRequestDto.getFilesIndex().add(String.valueOf(fileIndex++));
+            } else if (ANSWER_MEDIA.equals(typeMediaList) && indexAnswer >= 0) {
+                answerFiles.add(file);
+                answerFilesKey.add(String.valueOf(fileIndex));
+                questionRequestDto.getListAnswer().get(indexAnswer).getFilesIndex().add(String.valueOf(fileIndex++));
+            }
+        }
+        return fileIndex;
     }
 
-}
+    private MultipartFile createMultipartFile(XWPFPictureData pictureData) {
+        return new CustomMultipartFile(
+                pictureData.getFileName(),
+                pictureData.getFileName(),
+                "image/" + getFileExtension(pictureData),
+                pictureData.getData()
+        );
+    }
 
+    private String getFileExtension(XWPFPictureData pictureData) {
+        String extension = pictureData.suggestFileExtension();
+        return (extension != null) ? extension : pictureData.getFileName().substring(pictureData.getFileName().lastIndexOf('.') + 1);
+    }
+
+    private void processTextLine(String lineText, QuizRequestDto quizRequestDto, QuestionRequestFeignDto questionRequestDto) {
+        if (lineText.startsWith(KEY_QUIZ_START)) {
+            quizRequestDto.setTitle(lineText.substring(KEY_QUIZ_START.length()).trim());
+        } else if (lineText.startsWith(KEY_QUIZ_CATEGORY_START)) {
+            try {
+                Category category = Category.valueOf(lineText.substring(KEY_QUIZ_CATEGORY_START.length()).trim().toUpperCase());
+                quizRequestDto.setCategory(category);
+            } catch (IllegalArgumentException e) {
+                log.error("Invalid category: {}", lineText);
+            }
+        } else if (lineText.startsWith(KEY_QUESTION_START)) {
+            questionRequestDto.setContent(lineText.substring(KEY_QUESTION_START.length()).trim());
+        } else if (lineText.startsWith(KEY_ANSWER_START)) {
+            String content = lineText.substring(KEY_ANSWER_START.length(), lineText.lastIndexOf(KEY_CORRECT_ANSWER)).trim();
+            boolean isCorrect = Boolean.parseBoolean(lineText.substring(lineText.lastIndexOf(KEY_CORRECT_ANSWER) + 1).trim());
+            AnswerRequestFeignDto answer = AnswerRequestFeignDto.builder().content(content).isCorrect(isCorrect).filesIndex(new ArrayList<>()).build();
+            questionRequestDto.getListAnswer().add(answer);
+        }
+    }
+
+    private QuestionRequestFeignDto initializeQuestionDto() {
+        return QuestionRequestFeignDto.builder()
+                .filesIndex(new ArrayList<>())
+                .listAnswer(new ArrayList<>())
+                .build();
+    }
+
+    private QuizResponseDto saveQuizAndQuestions(QuizRequestDto quizRequestDto,
+                                                 List<QuestionRequestFeignDto> questionRequestDtos,
+                                                 List<MultipartFile> questionFiles, List<String> questionFilesKey,
+                                                 List<MultipartFile> answerFiles, List<String> answerFilesKey) throws IOException {
+        long examId = quizService.createExam(quizRequestDto).getId();
+        questionRequestDtos.forEach(question -> question.setExamId(examId));
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        String questionsJson = objectMapper.writeValueAsString(questionRequestDtos);
+        questionClient.createListQuestionByFeign(
+                questionsJson,
+                questionFilesKey.isEmpty() ? null : questionFilesKey,
+                questionFiles.isEmpty() ? null : questionFiles,
+                answerFilesKey.isEmpty() ? null : answerFilesKey,
+                answerFiles.isEmpty() ? null : answerFiles
+        );
+
+        return quizService.getExamById(examId);
+    }
+}

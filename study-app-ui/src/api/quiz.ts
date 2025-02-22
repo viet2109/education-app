@@ -1,5 +1,6 @@
 import {
   Category,
+  ExamHistory,
   PaginatedResponse,
   Quiz,
   QuizAnswer,
@@ -177,7 +178,7 @@ export const createQuiz = async (quiz: QuizRequest): Promise<Quiz> => {
   }
 };
 
-export const submitExam = async (examId: number, quizAnswer: QuizAnswer[]): Promise<QuizAnswerResponse> => {
+export const submitExam = async (examId: number, quizAnswer: QuizAnswer): Promise<ExamHistory> => {
   dispatch(fetchStart()); // Bắt đầu fetch
 
   try {
