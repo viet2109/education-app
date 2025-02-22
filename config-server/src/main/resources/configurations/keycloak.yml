@@ -2,7 +2,7 @@ app:
   keycloak:
     admin:
       clientId: admin-cli
-      clientSecret: fRhGYeALdq0EzIqBbtzXNQgvbQWN4Ab6
+      clientSecret: 3bTUBnovzrfjVnaEaSkNfGNiatEeixeB
     realm: education-app
     serverUrl: http://localhost:9082
 

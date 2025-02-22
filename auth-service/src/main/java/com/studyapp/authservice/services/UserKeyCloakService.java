@@ -34,21 +34,16 @@ import java.util.*;
 public class UserKeyCloakService {
 
     private final UserClient userClient;
-
-    @Value("${app.keycloak.realm}")
-    private String realm;
-
-    @Value("${app.keycloak.admin.clientId}")
-    private String clientId;
-
-    @Value("${app.keycloak.admin.clientSecret}")
-    private String clientSecret;
-
-    @Value("${app.keycloak.serverUrl}")
-    private String serverUrl;
-
     private final Keycloak keycloak;
     private final CacheClient cacheClient;
+    @Value("${app.keycloak.realm}")
+    private String realm;
+    @Value("${app.keycloak.admin.clientId}")
+    private String clientId;
+    @Value("${app.keycloak.admin.clientSecret}")
+    private String clientSecret;
+    @Value("${app.keycloak.serverUrl}")
+    private String serverUrl;
 
     public UserResponse register(UserRequest userRequest) {
         UserResponse userResponse = userClient.createUser(userRequest).getBody();
@@ -79,7 +74,7 @@ public class UserKeyCloakService {
         RolesResource rolesResource = keycloak.realm(realm).roles();
         if (rolesResource.list().stream().anyMatch(roleRepresentation -> roleRepresentation.getName().equals(role.name()))) {
             RoleRepresentation representation = rolesResource.get(role.name()).toRepresentation();
-            getUser(userId).roles().realmLevel().add(Collections.singletonList(representation));
+            getUser(userId).roles().clientLevel(clientId).add(Collections.singletonList(representation));
         }
     }
 
@@ -188,6 +183,7 @@ public class UserKeyCloakService {
                 .build()) {
 
             AccessTokenResponse tokenResponse = keycloak.tokenManager().getAccessToken();
+            log.info("{}", tokenResponse);
             if (!isVerifiedEmail(userLoginRequest.getEmail())) throw new AuthException(AuthError.UNVERIFIED_EMAIL);
             if (!isActiveAccount(userLoginRequest.getEmail())) throw new AuthException(AuthError.DISABLED_ACCOUNT);
             String userId = getUsersResource().searchByEmail(userLoginRequest.getEmail(), true).get(0).getAttributes().get("db_id").get(0);
@@ -202,6 +198,7 @@ public class UserKeyCloakService {
             responseMap.put("sessionId", sessionId);
 
         } catch (AuthException exception) {
+            log.error(exception.getMessage());
             throw exception;
         } catch (Exception exception) {
             log.error(exception.getMessage());
